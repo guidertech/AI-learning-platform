@@ -54,6 +54,11 @@ export async function updateSession(request: NextRequest) {
   );
 
   if (isProtectedRoute && !user) {
+    // Dev bypass in development mode to allow testing voice features without redirection loops
+    if (process.env.NODE_ENV === "development") {
+      console.log("[Dev Middleware] Bypassing auth check in dev mode to support local mic API.");
+      return supabaseResponse;
+    }
     // Redirect to login if unauthenticated
     const url = request.nextUrl.clone();
     url.pathname = "/login";

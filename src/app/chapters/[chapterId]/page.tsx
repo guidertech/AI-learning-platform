@@ -1,11 +1,13 @@
 "use client";
 
-import React, { use } from "react";
+import React, { use, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import EmptyState from "@/components/layout/EmptyState";
 import { mockChapters } from "@/lib/mock/chapters";
+import { mockSubjects } from "@/lib/mock/subjects";
+import { useLearning } from "@/context/LearningContext";
 
 interface ChapterDetailPageProps {
   params: Promise<{ chapterId: string }>;
@@ -14,6 +16,8 @@ interface ChapterDetailPageProps {
 export default function ChapterDetailPage({ params }: ChapterDetailPageProps) {
   const router = useRouter();
   const { chapterId } = use(params);
+
+  const { setActiveChapter, setActiveSubject } = useLearning();
 
   // Search for the chapter across all subjects
   let foundChapter: any = null;
@@ -27,6 +31,16 @@ export default function ChapterDetailPage({ params }: ChapterDetailPageProps) {
       break;
     }
   }
+
+  useEffect(() => {
+    if (foundChapter) {
+      setActiveChapter(foundChapter.title);
+      const subject = mockSubjects.find((s) => s.id === subjectId);
+      if (subject) {
+        setActiveSubject(subject.name);
+      }
+    }
+  }, [foundChapter, subjectId, setActiveChapter, setActiveSubject]);
 
   if (!foundChapter) {
     return (
@@ -67,10 +81,10 @@ export default function ChapterDetailPage({ params }: ChapterDetailPageProps) {
           <h3 className="font-bold text-sm text-on-surface mb-2 pl-1">Syllabus Outline</h3>
           
           <div className="space-y-3 select-none">
-            {foundChapter.topics.map((top: any, idx: number) => (
+             {foundChapter.topics.map((top: any, idx: number) => (
               <div 
                 key={top.id}
-                onClick={() => router.push(`/learning/fractions`)}
+                onClick={() => router.push(`/learning/${top.slug}`)}
                 className="flex items-center justify-between p-4 bg-slate-50/50 hover:bg-primary-container/5 rounded-2xl border border-outline-variant/10 hover:border-primary/20 transition-all cursor-pointer group active:scale-[0.99]"
               >
                 <div className="flex items-center gap-4">

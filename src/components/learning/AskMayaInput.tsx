@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { useLearning } from "@/context/LearningContext";
+import { topicContents } from "@/lib/mock/topicContent";
 
 interface AskMayaInputProps {
   onSendMessage: (text: string) => void;
@@ -9,6 +11,11 @@ interface AskMayaInputProps {
 
 export default function AskMayaInput({ onSendMessage, onQuickQuestion }: AskMayaInputProps) {
   const [text, setText] = useState("");
+  const { activeTopic } = useLearning();
+
+  const activeContent = Object.values(topicContents).find(
+    (content) => content.title === activeTopic
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,7 +24,7 @@ export default function AskMayaInput({ onSendMessage, onQuickQuestion }: AskMaya
     setText("");
   };
 
-  const quickReplies = [
+  const quickReplies = activeContent?.quickReplies || [
     "Explain $3\\frac{3}{4}$ equivalent fraction",
     "Recap converting mixed numbers",
     "Why is it called denominator?"

@@ -9,6 +9,7 @@ interface LearningContextType {
   studentMins: number;
   dailyGoal: number;
   studentName: string;
+  studentGrade: string;
   activeSubject: string;
   activeChapter: string;
   activeTopic: string;
@@ -21,6 +22,11 @@ interface LearningContextType {
   submitQuizScore: (score: number) => void;
   resolveWeakness: (id: string) => void;
   resetChat: () => void;
+  initializeChatForTopic: (topicName: string, welcomeMsg: string) => void;
+  setActiveSubject: (subject: string) => void;
+  setActiveChapter: (chapter: string) => void;
+  setActiveTopic: (topic: string) => void;
+  updateProfile: (name: string, grade: string) => Promise<void>;
 }
 
 const LearningContext = createContext<LearningContextType | undefined>(undefined);
@@ -29,9 +35,10 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
   const [studentMins, setStudentMins] = useState(42);
   const [dailyGoal] = useState(60);
   const [studentName, setStudentName] = useState("Maya");
-  const [activeSubject] = useState("Mathematics");
-  const [activeChapter] = useState("Chapter 4: Fractions");
-  const [activeTopic] = useState("Mixed Numbers");
+  const [studentGrade, setStudentGrade] = useState("Grade 5");
+  const [activeSubject, setActiveSubject] = useState("Mathematics");
+  const [activeChapter, setActiveChapter] = useState("Chapter 4: Fractions");
+  const [activeTopic, setActiveTopic] = useState("Mixed Numbers");
   const [percentComplete, setPercentComplete] = useState(65);
   const [weaknesses, setWeaknesses] = useState<Weakness[]>(mockWeaknesses);
   const [chatMessages, setChatMessages] = useState<Message[]>(initialChatMessages);
@@ -72,11 +79,13 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
               setStudentName(newProfile.full_name);
               setStudentMins(newProfile.student_mins);
               setPercentComplete(newProfile.percent_complete);
+              setStudentGrade(newProfile.current_class || "Grade 5");
             }
           } else if (profile) {
             setStudentName(profile.full_name);
             setStudentMins(profile.student_mins);
             setPercentComplete(profile.percent_complete);
+            setStudentGrade(profile.current_class || "Grade 5");
           }
 
           // 2. Fetch Chat Messages
@@ -152,6 +161,28 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
 
     const savedName = localStorage.getItem("classorbit_name");
     if (savedName) setStudentName(savedName);
+
+    const savedGrade = localStorage.getItem("classorbit_grade");
+    if (savedGrade) setStudentGrade(savedGrade);
+  };
+
+  const updateProfile = async (name: string, grade: string) => {
+    setStudentName(name);
+    setStudentGrade(grade);
+
+    if (hasSupabase && supabase) {
+      try {
+        await supabase
+          .from("profiles")
+          .update({ full_name: name, current_class: grade })
+          .eq("id", profileId);
+      } catch (err) {
+        console.error("Failed to save profile to Supabase:", err);
+      }
+    } else {
+      localStorage.setItem("classorbit_name", name);
+      localStorage.setItem("classorbit_grade", grade);
+    }
   };
 
   const addChatMessage = async (text: string, sender: "USER" | "AI") => {
@@ -187,7 +218,9 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message: text,
-            history: chatMessages.slice(-6).map(m => ({ sender: m.sender, text: m.text }))
+            history: chatMessages.slice(-6).map(m => ({ sender: m.sender, text: m.text })),
+            subject: activeSubject,
+            topic: activeTopic
           })
         });
         
@@ -314,12 +347,38 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const initializeChatForTopic = async (topicName: string, welcomeMsg: string) => {
+    setActiveTopic(topicName);
+    setChatMessages([
+      {
+        id: `msg-init-${Date.now()}`,
+        sender: "AI",
+        text: welcomeMsg,
+        createdAt: new Date().toISOString()
+      }
+    ]);
+
+    if (hasSupabase && supabase) {
+      try {
+        await supabase.from("tutor_messages").delete().eq("profile_id", profileId);
+        await supabase.from("tutor_messages").insert([{
+          profile_id: profileId,
+          sender: "AI",
+          text: welcomeMsg
+        }]);
+      } catch (err) {
+        console.error("Error updating database chat messages for new topic:", err);
+      }
+    }
+  };
+
   return (
     <LearningContext.Provider
       value={{
         studentMins,
         dailyGoal,
         studentName,
+        studentGrade,
         activeSubject,
         activeChapter,
         activeTopic,
@@ -331,7 +390,12 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
         updateProgress,
         submitQuizScore,
         resolveWeakness,
-        resetChat
+        resetChat,
+        initializeChatForTopic,
+        setActiveSubject,
+        setActiveChapter,
+        setActiveTopic,
+        updateProfile
       }}
     >
       {children}

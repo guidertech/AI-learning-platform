@@ -11,6 +11,7 @@ import ThinkCard from "@/components/learning/ThinkCard";
 import LearningProgress from "@/components/learning/LearningProgress";
 import MayaPanel from "@/components/learning/MayaPanel";
 import LoadingSkeleton from "@/components/layout/LoadingSkeleton";
+import { topicContents } from "@/lib/mock/topicContent";
 
 interface LearningWorkspacePageProps {
   params: Promise<{ conceptId: string }>;
@@ -20,12 +21,14 @@ export default function LearningWorkspacePage({ params }: LearningWorkspacePageP
   const router = useRouter();
   const { conceptId } = use(params);
 
-  const { incrementStudyTime } = useLearning();
+  const { incrementStudyTime, initializeChatForTopic } = useLearning();
   const [activeStep, setActiveStep] = useState<"learn" | "example" | "think" | "quiz">("learn");
   const [selectedThinkOpt, setSelectedThinkOpt] = useState<string | null>(null);
   const [thinkChecked, setThinkChecked] = useState(false);
   const [thinkCorrect, setThinkCorrect] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const topicContent = topicContents[conceptId] || topicContents["fractions-intro"];
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 500);
@@ -38,6 +41,13 @@ export default function LearningWorkspacePage({ params }: LearningWorkspacePageP
     return () => clearInterval(timer);
   }, []);
 
+  // Initialize welcome message for Maya Panel based on the current topic
+  useEffect(() => {
+    if (topicContent) {
+      initializeChatForTopic(topicContent.title, topicContent.tutorWelcomeMessage);
+    }
+  }, [conceptId, topicContent]);
+
   const handleThinkSelect = (opt: string) => {
     if (thinkChecked) return;
     setSelectedThinkOpt(opt);
@@ -46,7 +56,7 @@ export default function LearningWorkspacePage({ params }: LearningWorkspacePageP
   const handleCheckThink = () => {
     if (!selectedThinkOpt) return;
     setThinkChecked(true);
-    setThinkCorrect(selectedThinkOpt.includes("2 slices"));
+    setThinkCorrect(selectedThinkOpt === topicContent.thinkStep.correctAnswerText);
   };
 
   const handleStepChange = (step: "learn" | "example" | "think" | "quiz") => {
@@ -60,7 +70,7 @@ export default function LearningWorkspacePage({ params }: LearningWorkspacePageP
   return (
     <PageContainer>
       <Topbar
-        title="🤖 Maya AI Workspace"
+        title={`🤖 Maya Workspace: ${topicContent.title}`}
         subtitle="Spend active minutes in workspace to solve today's goals"
         showBack={true}
       />
@@ -84,10 +94,10 @@ export default function LearningWorkspacePage({ params }: LearningWorkspacePageP
               {activeStep === "learn" && (
                 <LearningStepCard
                   stepNumber={1}
-                  title="Understanding the Parts"
-                  durationText="~30 sec"
-                  imageSrc="https://lh3.googleusercontent.com/aida-public/AB6AXuBDf_IKR0yBGVX2eJ1rWVxjCQoz4YAdX1dJDCDCPv2lhlDdOlpQrpUqUm02hR_fhsI5rSuuZ2APm2G9DuaXDUdAM4OCf4dOIN6Tqy9MlbRXQW4hvn-trVr-T6dHirbxqNJTvcvxDklhcHUOP8wJE_qJmhET3suQ-J9Pep4g_8-I0NMnw1mGyixBi1e_e40D5jXEJt1otZNb7x-KO4LpwE3X27YfHYClYLcJObpzux4UtcrRA1Di52lUUSKu8XaiCTS0hWryLjQwHyQ"
-                  descriptionText="Think of a fraction as a 'part of a whole.' When you divide one thing into several equal pieces, each piece represents a fraction."
+                  title={topicContent.learnStep.title}
+                  durationText={topicContent.learnStep.durationText}
+                  imageSrc={topicContent.learnStep.imageSrc}
+                  descriptionText={topicContent.learnStep.descriptionText}
                 />
               )}
 
@@ -95,24 +105,24 @@ export default function LearningWorkspacePage({ params }: LearningWorkspacePageP
               {activeStep === "example" && (
                 <RealLifeExampleCard
                   stepNumber={2}
-                  title="The Pizza Party"
-                  durationText="~1 min"
-                  imageSrc="https://lh3.googleusercontent.com/aida/AP1WRLsjwJ-9ibIX6zhvQAlRqvsLnrxUdURPxkrgpFL4qpDmAUrYiOSoZjMX_ipBnum3RlucxR89ZdFbeOPBZHnBcgcuQannTPDGeYgH2itqehbkS1ObWqxLb5JHulkAVQw-K-uhHrxU5Qnbfl2NkJYrS-0o2BPT3Jcezg3LjZNZcVqB2Ja-TsiTmAmbXGwl3fDanKnxoaGOQKubJ6_EpdDI60eAyH8rVLdxQPZhbTVYN7OIAvIXUXdSXPW58oY"
-                  descriptionText="If a pizza is cut into 8 equal slices, and you eat 1 slice, you've consumed 1/8. The 1 is your part, and the 8 is the total whole!"
+                  title={topicContent.exampleStep.title}
+                  durationText={topicContent.exampleStep.durationText}
+                  imageSrc={topicContent.exampleStep.imageSrc}
+                  descriptionText={topicContent.exampleStep.descriptionText}
                 />
               )}
 
               {/* Step 3 – Think */}
               {activeStep === "think" && (
                 <ThinkCard
-                  promptText="If you share a pizza with 3 friends (4 people total), how many slices does everyone get if it's cut into 8?"
-                  options={["1 slice (1/8)", "2 slices (2/8 or 1/4)", "3 slices (3/8)"]}
+                  promptText={topicContent.thinkStep.promptText}
+                  options={topicContent.thinkStep.options}
                   selectedOption={selectedThinkOpt}
                   onSelectOption={handleThinkSelect}
                   checked={thinkChecked}
                   isCorrect={thinkCorrect}
                   onCheckAnswer={handleCheckThink}
-                  correctAnswerText="2 slices (2/8 or 1/4)"
+                  correctAnswerText={topicContent.thinkStep.correctAnswerText}
                 />
               )}
 

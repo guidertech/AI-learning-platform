@@ -1,12 +1,13 @@
 "use client";
 
-import React, { use } from "react";
+import React, { use, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import EmptyState from "@/components/layout/EmptyState";
 import { mockChapters } from "@/lib/mock/chapters";
 import { mockSubjects } from "@/lib/mock/subjects";
+import { useLearning } from "@/context/LearningContext";
 
 interface ChaptersPageProps {
   params: Promise<{ subjectId: string }>;
@@ -16,7 +17,15 @@ export default function SubjectChaptersPage({ params }: ChaptersPageProps) {
   const router = useRouter();
   const { subjectId } = use(params);
 
+  const { setActiveSubject } = useLearning();
   const subject = mockSubjects.find((s) => s.id === subjectId);
+
+  useEffect(() => {
+    if (subject) {
+      setActiveSubject(subject.name);
+    }
+  }, [subject, setActiveSubject]);
+
   const chapters = mockChapters[subjectId] || [];
 
   const subjectName = subject?.name || "Subject Details";
