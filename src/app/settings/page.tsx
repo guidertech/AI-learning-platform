@@ -26,6 +26,7 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
+  const [activeFaqQuestion, setActiveFaqQuestion] = useState<number | null>(null);
 
   const handleLogout = async () => {
     resetChat();
@@ -288,7 +289,7 @@ export default function SettingsPage() {
                   </div>
 
                   {faqOpen && (
-                    <div className="bg-slate-50/50 border border-outline-variant/10 rounded-xl p-4 space-y-4 animate-fade-in select-none">
+                    <div className="bg-slate-100/50 border border-outline-variant/10 rounded-xl p-3 space-y-2.5 animate-fade-in select-none">
                       {[
                         {
                           q: "What can I see on my Dashboard?",
@@ -302,17 +303,40 @@ export default function SettingsPage() {
                           q: "What is the AI Workspace?",
                           a: "The AI Workspace is your interactive study room. Opening any topic instantly connects you with Maya via real-time Socratic voice to explain concepts, guide you with hints, and test your skills."
                         }
-                      ].map((item, idx) => (
-                        <div key={idx} className="space-y-1">
-                          <p className="text-xs font-bold text-on-surface flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                            {item.q}
-                          </p>
-                          <p className="text-[10px] text-on-surface-variant leading-relaxed font-semibold pl-3">
-                            {item.a}
-                          </p>
-                        </div>
-                      ))}
+                      ].map((item, idx) => {
+                        const isQuestionOpen = activeFaqQuestion === idx;
+                        return (
+                          <div 
+                            key={idx} 
+                            className="bg-white border border-outline-variant/10 rounded-xl overflow-hidden transition-all duration-200"
+                          >
+                            {/* Question Header */}
+                            <div 
+                              onClick={() => setActiveFaqQuestion(isQuestionOpen ? null : idx)}
+                              className="flex items-center justify-between p-3.5 cursor-pointer hover:bg-slate-50 transition-colors gap-3"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isQuestionOpen ? "bg-primary" : "bg-outline"}`} />
+                                <span className={`text-xs font-bold transition-colors duration-150 ${isQuestionOpen ? "text-primary" : "text-on-surface"}`}>
+                                  {item.q}
+                                </span>
+                              </div>
+                              <span className={`material-symbols-outlined text-[18px] font-bold shrink-0 transition-transform duration-200 ${isQuestionOpen ? "text-primary rotate-180" : "text-outline"}`}>
+                                {isQuestionOpen ? "remove" : "add"}
+                              </span>
+                            </div>
+                            
+                            {/* Question Answer Panel */}
+                            {isQuestionOpen && (
+                              <div className="px-4 pb-3.5 pt-0.5 border-t border-outline-variant/5 animate-fade-in">
+                                <p className="text-[10px] text-on-surface-variant leading-relaxed font-semibold pl-3">
+                                  {item.a}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
