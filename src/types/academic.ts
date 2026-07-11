@@ -23,6 +23,7 @@ export interface Chapter {
   orderIndex: number;
   description: string;
   topics: Topic[];
+  hasPrerequisite?: boolean;
 }
 
 export interface Subject {

@@ -5,14 +5,14 @@ import { useLearning } from "@/context/LearningContext";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import ContinueLearningCard from "@/components/dashboard/ContinueLearningCard";
-import TodayGoalCard from "@/components/dashboard/TodayGoalCard";
+
 import QuickActions from "@/components/dashboard/QuickActions";
 import AIRecommendationCard from "@/components/dashboard/AIRecommendationCard";
 import LoadingSkeleton from "@/components/layout/LoadingSkeleton";
 import { mockSubjectProficiencies } from "@/lib/mock/progress";
 
 export default function DashboardPage() {
-  const { studentName, studentMins, dailyGoal, percentComplete, activeSubject, activeChapter, activeTopic } = useLearning();
+  const { studentName, percentComplete, activeSubject, activeChapter, activeTopic } = useLearning();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,27 +30,13 @@ export default function DashboardPage() {
           <LoadingSkeleton type="dashboard" />
         ) : (
           <>
-            {/* Top row split layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              
-              {/* Left Column: Continue Learning Card - 7 cols */}
-              <div className="lg:col-span-7">
-                <ContinueLearningCard 
-                  subjectName={activeSubject}
-                  chapterTitle={activeChapter}
-                  topicTitle={activeTopic}
-                  percentComplete={percentComplete}
-                />
-              </div>
-
-              {/* Right Column: Goal progress - 5 cols */}
-              <div className="lg:col-span-5">
-                <TodayGoalCard 
-                  studentMins={studentMins}
-                  dailyGoal={dailyGoal}
-                />
-              </div>
-            </div>
+            {/* Continue Learning Card */}
+            <ContinueLearningCard 
+              subjectName={activeSubject}
+              chapterTitle={activeChapter}
+              topicTitle={activeTopic}
+              percentComplete={percentComplete}
+            />
 
             {/* Quick Actions Shortcuts */}
             <section className="space-y-3">

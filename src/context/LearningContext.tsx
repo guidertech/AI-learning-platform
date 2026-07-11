@@ -7,9 +7,11 @@ import { supabase, hasSupabase, getLocalProfileId } from "@/lib/supabase";
 
 interface LearningContextType {
   studentMins: number;
-  dailyGoal: number;
   studentName: string;
   studentGrade: string;
+  studentSchool: string;
+  studentAge: number;
+  studentTutorPersona: string;
   activeSubject: string;
   activeChapter: string;
   activeTopic: string;
@@ -26,22 +28,30 @@ interface LearningContextType {
   setActiveSubject: (subject: string) => void;
   setActiveChapter: (chapter: string) => void;
   setActiveTopic: (topic: string) => void;
-  updateProfile: (name: string, grade: string) => Promise<void>;
+  updateProfile: (name: string, grade: string, school: string, age: number, tutorPersona: string) => Promise<void>;
+  isAISpeaking: boolean;
+  setIsAISpeaking: (isSpeaking: boolean) => void;
+  activeAITranscription: string;
+  setActiveAITranscription: (text: string) => void;
 }
 
 const LearningContext = createContext<LearningContextType | undefined>(undefined);
 
 export function LearningProvider({ children }: { children: React.ReactNode }) {
   const [studentMins, setStudentMins] = useState(42);
-  const [dailyGoal] = useState(60);
   const [studentName, setStudentName] = useState("Maya");
   const [studentGrade, setStudentGrade] = useState("Grade 5");
+  const [studentSchool, setStudentSchool] = useState("St. Mary's Academy");
+  const [studentAge, setStudentAge] = useState(10);
+  const [studentTutorPersona, setStudentTutorPersona] = useState("Socratic");
   const [activeSubject, setActiveSubject] = useState("Mathematics");
   const [activeChapter, setActiveChapter] = useState("Chapter 4: Fractions");
   const [activeTopic, setActiveTopic] = useState("Mixed Numbers");
   const [percentComplete, setPercentComplete] = useState(65);
   const [weaknesses, setWeaknesses] = useState<Weakness[]>(mockWeaknesses);
   const [chatMessages, setChatMessages] = useState<Message[]>(initialChatMessages);
+  const [isAISpeaking, setIsAISpeaking] = useState(false);
+  const [activeAITranscription, setActiveAITranscription] = useState("");
 
   const profileId = getLocalProfileId();
 
@@ -80,12 +90,18 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
               setStudentMins(newProfile.student_mins);
               setPercentComplete(newProfile.percent_complete);
               setStudentGrade(newProfile.current_class || "Grade 5");
+              setStudentSchool(newProfile.school || "St. Mary's Academy");
+              setStudentAge(newProfile.age || 10);
+              setStudentTutorPersona(newProfile.tutor_persona || "Socratic");
             }
           } else if (profile) {
             setStudentName(profile.full_name);
             setStudentMins(profile.student_mins);
             setPercentComplete(profile.percent_complete);
             setStudentGrade(profile.current_class || "Grade 5");
+            setStudentSchool(profile.school || "St. Mary's Academy");
+            setStudentAge(profile.age || 10);
+            setStudentTutorPersona(profile.tutor_persona || "Socratic");
           }
 
           // 2. Fetch Chat Messages
@@ -164,17 +180,35 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
 
     const savedGrade = localStorage.getItem("classorbit_grade");
     if (savedGrade) setStudentGrade(savedGrade);
+
+    const savedSchool = localStorage.getItem("classorbit_school");
+    if (savedSchool) setStudentSchool(savedSchool);
+
+    const savedAge = localStorage.getItem("classorbit_age");
+    if (savedAge) setStudentAge(parseInt(savedAge, 10));
+
+    const savedPersona = localStorage.getItem("classorbit_persona");
+    if (savedPersona) setStudentTutorPersona(savedPersona);
   };
 
-  const updateProfile = async (name: string, grade: string) => {
+  const updateProfile = async (name: string, grade: string, school: string, age: number, tutorPersona: string) => {
     setStudentName(name);
     setStudentGrade(grade);
+    setStudentSchool(school);
+    setStudentAge(age);
+    setStudentTutorPersona(tutorPersona);
 
     if (hasSupabase && supabase) {
       try {
         await supabase
           .from("profiles")
-          .update({ full_name: name, current_class: grade })
+          .update({ 
+            full_name: name, 
+            current_class: grade, 
+            school: school,
+            age: age,
+            tutor_persona: tutorPersona
+          })
           .eq("id", profileId);
       } catch (err) {
         console.error("Failed to save profile to Supabase:", err);
@@ -182,6 +216,9 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
     } else {
       localStorage.setItem("classorbit_name", name);
       localStorage.setItem("classorbit_grade", grade);
+      localStorage.setItem("classorbit_school", school);
+      localStorage.setItem("classorbit_age", age.toString());
+      localStorage.setItem("classorbit_persona", tutorPersona);
     }
   };
 
@@ -220,7 +257,8 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
             message: text,
             history: chatMessages.slice(-6).map(m => ({ sender: m.sender, text: m.text })),
             subject: activeSubject,
-            topic: activeTopic
+            topic: activeTopic,
+            persona: studentTutorPersona
           })
         });
         
@@ -376,9 +414,11 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
     <LearningContext.Provider
       value={{
         studentMins,
-        dailyGoal,
         studentName,
         studentGrade,
+        studentSchool,
+        studentAge,
+        studentTutorPersona,
         activeSubject,
         activeChapter,
         activeTopic,
@@ -395,7 +435,11 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
         setActiveSubject,
         setActiveChapter,
         setActiveTopic,
-        updateProfile
+        updateProfile,
+        isAISpeaking,
+        setIsAISpeaking,
+        activeAITranscription,
+        setActiveAITranscription
       }}
     >
       {children}

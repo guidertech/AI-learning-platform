@@ -64,3 +64,9 @@ CREATE TABLE IF NOT EXISTS public.quiz_attempts (
 ALTER TABLE public.quiz_attempts ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow public access to quiz_attempts" ON public.quiz_attempts FOR ALL USING (true) WITH CHECK (true);
+
+-- Add quiz_type and chapter_id to support prerequisite + chapter-end tests
+ALTER TABLE public.quiz_attempts
+  ADD COLUMN IF NOT EXISTS quiz_type TEXT DEFAULT 'chapter_end'
+    CHECK (quiz_type IN ('prerequisite', 'chapter_end')),
+  ADD COLUMN IF NOT EXISTS chapter_id TEXT;

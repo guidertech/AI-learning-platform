@@ -150,4 +150,41 @@ body {
 .typing-dot-2 { animation-delay: 0.3s; }
 .typing-dot-3 { animation-delay: 0.5s; }
 
+/* Custom Mini Scrollbar */
+.custom-mini-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-mini-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-mini-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant);
+  border-radius: 4px;
+}
+.custom-mini-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
+}
+.custom-mini-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-outline-variant) transparent;
+}
+
+/* Premium Modal Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+.animate-scale-up {
+  animation: scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+
+
 

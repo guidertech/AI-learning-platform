@@ -1,4 +1,5 @@
 import { QuizQuestion } from "@/types/quiz";
+import { chapterQuizzes } from "./chapterQuizzes";
 
 export const mockQuizQuestions: Record<string, QuizQuestion[]> = {
   "top-4-3": [
@@ -25,3 +26,94 @@ export const mockQuizQuestions: Record<string, QuizQuestion[]> = {
     }
   ]
 };
+
+// Normalize/Map activeTopic title to the topic keys in our MCQ database
+export function getTopicKeywords(activeTopic: string): string[] {
+  const norm = activeTopic.toLowerCase();
+  
+  if (norm.includes("place value")) return ["Place Values", "Large Numbers"];
+  if (norm.includes("comparing decimal")) return ["Comparing Decimals"];
+  if (norm.includes("column addition") || norm.includes("addition")) return ["Basic Addition", "Column Method"];
+  if (norm.includes("division")) return ["Division with Remainders", "Division Basics"];
+  if (norm.includes("introduction to fraction") || norm.includes("fraction basics")) return ["Fraction Basics"];
+  if (norm.includes("equivalent fraction")) return ["Equivalent Fractions"];
+  if (norm.includes("mixed number")) return ["Mixed Numbers"];
+  if (norm.includes("photosynthesis equation")) return ["Photosynthesis Equation", "Photosynthesis Basics"];
+  if (norm.includes("rowlatt act") || norm.includes("background")) return ["Rowlatt Act", "Location & Context"];
+  if (norm.includes("jallianwala bagh massacre")) return ["Location & Context"];
+  if (norm.includes("general dyer")) return ["General Dyer"];
+  if (norm.includes("impact")) return ["Impact"];
+  if (norm.includes("reaction") || norm.includes("investigation")) return ["Investigation", "Impact"];
+  
+  // Default fallback keywords matching the input topic title itself
+  return [activeTopic];
+}
+
+export function getRandomQuizQuestionsForTopic(activeTopic: string): QuizQuestion[] {
+  const keywords = getTopicKeywords(activeTopic);
+  const pool: QuizQuestion[] = [];
+  
+  // 1. Gather from chapterQuizzes (both prerequisite and chapterEnd)
+  chapterQuizzes.forEach((quiz) => {
+    // Collect from prerequisites
+    quiz.prerequisite.forEach((q) => {
+      if (keywords.some((kw) => q.topic.toLowerCase().includes(kw.toLowerCase()) || kw.toLowerCase().includes(q.topic.toLowerCase()))) {
+        pool.push({
+          id: q.id,
+          questionText: q.question,
+          options: q.options,
+          correctAnswer: q.options[q.correctIndex],
+          explanation: q.explanation,
+        });
+      }
+    });
+    // Collect from chapterEnds
+    quiz.chapterEnd.forEach((q) => {
+      if (keywords.some((kw) => q.topic.toLowerCase().includes(kw.toLowerCase()) || kw.toLowerCase().includes(q.topic.toLowerCase()))) {
+        pool.push({
+          id: q.id,
+          questionText: q.question,
+          options: q.options,
+          correctAnswer: q.options[q.correctIndex],
+          explanation: q.explanation,
+        });
+      }
+    });
+  });
+
+  // 2. Gather from mockQuizQuestions (e.g. top-4-3)
+  if (activeTopic.toLowerCase().includes("mixed number")) {
+    const mq = mockQuizQuestions["top-4-3"] || [];
+    mq.forEach((q) => {
+      if (!pool.some(p => p.id === q.id)) {
+        pool.push(q);
+      }
+    });
+  }
+
+  // 3. Fallback: If pool is empty, grab any questions
+  if (pool.length === 0) {
+    chapterQuizzes.forEach((quiz) => {
+      quiz.prerequisite.forEach((q) => {
+        pool.push({
+          id: q.id,
+          questionText: q.question,
+          options: q.options,
+          correctAnswer: q.options[q.correctIndex],
+          explanation: q.explanation,
+        });
+      });
+    });
+  }
+
+  // Deduplicate pool
+  const uniquePool = pool.filter((q, index, self) =>
+    self.findIndex((t) => t.id === q.id) === index
+  );
+
+  // Shuffle pool
+  const shuffled = [...uniquePool].sort(() => 0.5 - Math.random());
+  
+  // Return exactly 5 questions
+  return shuffled.slice(0, 5);
+}

@@ -36,7 +36,7 @@ export default function ProfileSetupPage() {
       
       if (user) {
         const { error } = await supabase
-          .from("student_profiles")
+          .from("profiles")
           .upsert([
             {
               id: user.id,

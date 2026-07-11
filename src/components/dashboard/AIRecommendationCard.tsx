@@ -32,7 +32,7 @@ export default function AIRecommendationCard({
         <div>
           <span className="text-[9px] text-primary uppercase font-bold tracking-wider">Maya's Recommendation</span>
           <p className="text-xs text-on-surface leading-relaxed font-semibold mt-1">
-            "Hi {studentName}! {recommendationText}"
+            "Hi {studentName ? studentName.split(" ")[0] : "Student"}! {recommendationText}"
           </p>
         </div>
         <button 

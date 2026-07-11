@@ -7,13 +7,13 @@ import { useLearning } from "@/context/LearningContext";
 
 export default function AppSidebar() {
   const pathname = usePathname();
-  const { studentName } = useLearning();
+  const { studentName, studentGrade } = useLearning();
 
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: "dashboard" },
     { name: "Subjects", href: "/subjects", icon: "import_contacts" },
-    { name: "AI Workspace", href: "/learning/fractions", icon: "psychology" },
-    { name: "Progress & Goals", href: "/progress", icon: "bar_chart" },
+    { name: "AI Workspace", href: "/learning", icon: "psychology" },
+    { name: "Report", href: "/progress", icon: "bar_chart" },
     { name: "Settings", href: "/settings", icon: "settings" }
   ];
 
@@ -74,8 +74,8 @@ export default function AppSidebar() {
           />
         </div>
         <div className="overflow-hidden">
-          <p className="font-bold text-sm text-on-surface truncate">{studentName} Sharma</p>
-          <p className="text-xs text-on-surface-variant font-medium">Grade 5 Student</p>
+          <p className="font-bold text-sm text-on-surface truncate">{studentName}</p>
+          <p className="text-xs text-on-surface-variant font-medium">{studentGrade} Student</p>
         </div>
       </div>
     </aside>

@@ -25,10 +25,12 @@ export default function PageContainer({ children, showNavbars = true }: PageCont
         <AppSidebar />
       </div>
 
-      {/* Main Content Area */}
-      <div className="grow flex flex-col relative w-full md:h-screen md:overflow-y-auto">
-        <div className="flex-1 w-full pb-20 md:pb-0">
-          {children}
+      {/* Main Content Area — outer clips horizontal overflow, inner scrolls vertically */}
+      <div className="grow flex flex-col min-w-0 overflow-x-hidden">
+        <div className="flex-1 flex flex-col w-full md:h-screen md:overflow-y-auto">
+          <div className="flex-1 w-full pb-20 md:pb-0">
+            {children}
+          </div>
         </div>
       </div>
 

@@ -39,8 +39,9 @@ wss.on("connection", async (clientWs, request) => {
   const studentName = reqUrl.searchParams.get("name") || "Maya";
   const studentGrade = reqUrl.searchParams.get("grade") || "Grade 5";
   const activeTopic = reqUrl.searchParams.get("topic") || "Fractions";
+  const activeChapter = reqUrl.searchParams.get("chapter") || "Chapter";
 
-  console.log(`[Server] Session details: Student: ${studentName}, Grade: ${studentGrade}, Topic: ${activeTopic}`);
+  console.log(`[Server] Session details: Student: ${studentName}, Grade: ${studentGrade}, Chapter: ${activeChapter}, Topic: ${activeTopic}`);
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -69,9 +70,13 @@ wss.on("connection", async (clientWs, request) => {
         },
         systemInstruction: `You are Maya, a professional, friendly, and helpful real-time AI teaching assistant.
 You are talking to a student named ${studentName} who is in ${studentGrade}.
-The active topic of study is "${activeTopic}".
-Answer the student's questions about "${activeTopic}" in a simple, age-appropriate way suitable for a ${studentGrade} student.
-Keep your answers brief, engaging, and highly conversational. Avoid very long explanations.`
+The active chapter is "${activeChapter}" and the active topic is "${activeTopic}".
+
+CRITICAL GUIDELINES:
+1. Speak strictly in clean, friendly Hindi/Hinglish with a warm, natural tone suitable for a 10-year-old child.
+2. Teach the topic step-by-step. Explain one small part of the concept, and then immediately ask a simple question in Hindi to check the student's understanding before moving forward.
+3. NEVER give the direct answer to any problem. Guide the student Socratically.
+4. Keep your answers brief, engaging, and highly conversational. Avoid very long explanations.`
       },
       callbacks: {
         onmessage: (message) => {
@@ -126,6 +131,13 @@ Keep your answers brief, engaging, and highly conversational. Avoid very long ex
     console.log("Connected successfully to Gemini Live API");
     if (clientWs.readyState === 1) {
       clientWs.send(JSON.stringify({ connected: true }));
+    }
+
+    if (geminiSession) {
+      const greetingPrompt = `Chaliye aaj hum "${activeChapter}" ka topic "${activeTopic}" padhte hain! Main aapko iske baare mein samjhaungi aur aapse sawal poochungi. chalo shuru karte hain. please explain the first basic concept of "${activeTopic}" briefly in friendly Hindi (using Devanagari transliteration / Hinglish or clean Hindi words) and ask me a simple question to test my understanding.`;
+      geminiSession.sendRealtimeInput({
+        text: greetingPrompt
+      });
     }
   } catch (err) {
     console.error("Failed to connect to Gemini Live:", err);

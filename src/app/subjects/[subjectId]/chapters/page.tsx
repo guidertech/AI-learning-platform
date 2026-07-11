@@ -9,6 +9,8 @@ import { mockChapters } from "@/lib/mock/chapters";
 import { mockSubjects } from "@/lib/mock/subjects";
 import { useLearning } from "@/context/LearningContext";
 
+import { getChapterQuiz } from "@/lib/mock/chapterQuizzes";
+
 interface ChaptersPageProps {
   params: Promise<{ subjectId: string }>;
 }
@@ -29,6 +31,42 @@ export default function SubjectChaptersPage({ params }: ChaptersPageProps) {
   const chapters = mockChapters[subjectId] || [];
 
   const subjectName = subject?.name || "Subject Details";
+
+  const handleChapterClick = (chId: string) => {
+    const chObj = chapters.find((c) => c.id === chId);
+    const quizData = getChapterQuiz(chId);
+    
+    if (chObj?.hasPrerequisite && quizData && quizData.prerequisite && quizData.prerequisite.length > 0) {
+      const recoveryPassed = sessionStorage.getItem(`prereq_recovery_passed_${chId}`) === "true";
+      if (recoveryPassed) {
+        router.push(`/chapters/${chId}`);
+        return;
+      }
+
+      const raw = sessionStorage.getItem(`prereq_results_${chId}`);
+      if (raw) {
+        try {
+          const data = JSON.parse(raw);
+          const results = data.results ?? [];
+          const total = results.length;
+          const correct = results.filter((r: any) => r.isCorrect).length;
+          const score = total > 0 ? Math.round((correct / total) * 100) : 0;
+          if (score >= 70) {
+            router.push(`/chapters/${chId}`);
+            return;
+          } else {
+            router.push(`/prerequisite/${chId}/results`);
+            return;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      router.push(`/prerequisite/${chId}`);
+    } else {
+      router.push(`/chapters/${chId}`);
+    }
+  };
 
   return (
     <PageContainer>
@@ -60,7 +98,7 @@ export default function SubjectChaptersPage({ params }: ChaptersPageProps) {
             {chapters.map((ch) => (
               <div 
                 key={ch.id}
-                onClick={() => router.push(`/chapters/${ch.id}`)}
+                onClick={() => handleChapterClick(ch.id)}
                 className="bg-white p-6 rounded-3xl border border-outline-variant/15 hover:border-primary/40 shadow-sm hover:shadow-md cursor-pointer transition-all active:scale-[0.98] flex flex-col justify-between h-44 group"
               >
                 <div>

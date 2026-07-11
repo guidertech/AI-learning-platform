@@ -30,16 +30,6 @@ export default function Topbar({ title, subtitle, showSearch = false, showBack =
           <h1 className="font-display font-bold text-base md:text-xl text-on-surface leading-tight">{title}</h1>
           {subtitle && <p className="text-[10px] md:text-[11px] text-on-surface-variant font-medium mt-0.5 hidden xs:block">{subtitle}</p>}
         </div>
-        {showSearch && (
-          <div className="relative w-80 hidden lg:block">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
-            <input 
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-outline-variant/15 rounded-full text-xs focus:outline-none focus:border-primary/50" 
-              placeholder="Search chapters or topics..." 
-              type="text"
-            />
-          </div>
-        )}
       </div>
 
       <div className="flex items-center gap-4">

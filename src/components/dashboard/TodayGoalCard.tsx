@@ -4,11 +4,10 @@ import React from "react";
 
 interface TodayGoalCardProps {
   studentMins: number;
-  dailyGoal: number;
 }
 
-export default function TodayGoalCard({ studentMins, dailyGoal }: TodayGoalCardProps) {
-  const percentage = Math.min(Math.round((studentMins / dailyGoal) * 100), 100);
+export default function TodayGoalCard({ studentMins }: TodayGoalCardProps) {
+  const percentage = Math.min(studentMins, 100);
   
   const radius = 40;
   const circumference = 2 * Math.PI * radius;
@@ -20,7 +19,7 @@ export default function TodayGoalCard({ studentMins, dailyGoal }: TodayGoalCardP
         <span className="text-[10px] text-outline uppercase font-bold tracking-wider">Goal Progress</span>
         <h3 className="font-bold text-base text-on-surface">Today's Focus</h3>
         <p className="text-xs text-on-surface-variant font-medium mt-1">
-          Spent <span className="text-primary font-bold">{studentMins} mins</span> out of your {dailyGoal} mins target.
+          Spent <span className="text-primary font-bold">{studentMins} mins</span> studying today.
         </p>
       </div>
 

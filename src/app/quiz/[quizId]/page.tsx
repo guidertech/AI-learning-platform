@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, use } from "react";
+import React, { useState, use, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useLearning } from "@/context/LearningContext";
-import { mockQuizQuestions } from "@/lib/mock/quiz";
+import { getRandomQuizQuestionsForTopic } from "@/lib/mock/quiz";
+import { QuizQuestion } from "@/types/quiz";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import QuizProgress from "@/components/quiz/QuizProgress";
@@ -20,13 +21,29 @@ export default function TopicQuizPage({ params }: QuizPageProps) {
   
   const { activeTopic, submitQuizScore } = useLearning();
 
-  const questions = mockQuizQuestions["top-4-3"] || [];
+  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedOpt, setSelectedOpt] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
   const [quizFinished, setQuizFinished] = useState(false);
+
+  useEffect(() => {
+    const list = getRandomQuizQuestionsForTopic(activeTopic);
+    setQuestions(list);
+  }, [activeTopic]);
+
+  if (questions.length === 0) {
+    return (
+      <PageContainer>
+        <Topbar title="Loading Quiz..." subtitle="Preparing your practice session" />
+        <main className="p-8 flex items-center justify-center min-h-[50vh]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </main>
+      </PageContainer>
+    );
+  }
 
   const currentQuestion = questions[currentIdx];
 

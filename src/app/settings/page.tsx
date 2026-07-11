@@ -15,14 +15,17 @@ const GRADE_OPTIONS = [
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { studentName, studentGrade, dailyGoal, resetChat, updateProfile } = useLearning();
+  const { studentName, studentGrade, studentSchool, studentAge, studentTutorPersona, resetChat, updateProfile } = useLearning();
   const supabase = createClient();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(studentName);
   const [editGrade, setEditGrade] = useState(studentGrade);
+  const [editSchool, setEditSchool] = useState(studentSchool);
+  const [editAge, setEditAge] = useState(studentAge);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [faqOpen, setFaqOpen] = useState(false);
 
   const handleLogout = async () => {
     resetChat();
@@ -34,6 +37,8 @@ export default function SettingsPage() {
   const handleEditClick = () => {
     setEditName(studentName);
     setEditGrade(studentGrade);
+    setEditSchool(studentSchool);
+    setEditAge(studentAge);
     setIsEditing(true);
     setSaveSuccess(false);
   };
@@ -47,7 +52,7 @@ export default function SettingsPage() {
     e.preventDefault();
     if (!editName.trim()) return;
     setIsSaving(true);
-    await updateProfile(editName.trim(), editGrade);
+    await updateProfile(editName.trim(), editGrade, editSchool.trim(), Number(editAge), studentTutorPersona);
     setIsSaving(false);
     setIsEditing(false);
     setSaveSuccess(true);
@@ -74,7 +79,8 @@ export default function SettingsPage() {
                 </div>
               </div>
               <h3 className="font-bold text-base text-on-surface mt-4">{studentName}</h3>
-              <p className="text-xs text-on-surface-variant font-medium mt-0.5">{studentGrade} • Mathematics Focus</p>
+              <p className="text-xs text-on-surface-variant font-medium mt-0.5">{studentGrade} · Age {studentAge}</p>
+              <p className="text-[10px] text-outline font-semibold mt-1 max-w-full truncate">{studentSchool}</p>
 
               <button 
                 onClick={handleLogout}
@@ -97,16 +103,33 @@ export default function SettingsPage() {
                 <>
                   <div
                     onClick={handleEditClick}
-                    className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:bg-primary/5 hover:border-primary/20 transition-all group"
+                    className="p-4 bg-slate-50 border border-slate-100 rounded-2xl cursor-pointer hover:bg-primary/5 hover:border-primary/20 transition-all group space-y-3"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-primary text-[18px]">manage_accounts</span>
-                      <div>
-                        <p className="text-xs font-bold text-on-surface">Edit Name & Class</p>
-                        <p className="text-[10px] text-on-surface-variant font-medium">{studentName} · {studentGrade}</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="material-symbols-outlined text-primary text-[18px]">manage_accounts</span>
+                        <p className="text-xs font-bold text-on-surface">Edit Student Profile Details</p>
+                      </div>
+                      <span className="material-symbols-outlined text-outline text-[18px] group-hover:text-primary transition-colors">edit</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 pt-1 text-[10px] text-on-surface-variant font-semibold">
+                      <div className="space-y-1">
+                        <span className="text-[9px] uppercase tracking-wider text-outline block">Full Name</span>
+                        <span className="text-on-surface font-bold text-xs">{studentName}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[9px] uppercase tracking-wider text-outline block">Grade / Class</span>
+                        <span className="text-on-surface font-bold text-xs">{studentGrade}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[9px] uppercase tracking-wider text-outline block">School</span>
+                        <span className="text-on-surface font-bold text-xs truncate block">{studentSchool}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[9px] uppercase tracking-wider text-outline block">Age</span>
+                        <span className="text-on-surface font-bold text-xs">{studentAge} years old</span>
                       </div>
                     </div>
-                    <span className="material-symbols-outlined text-outline text-[18px] group-hover:text-primary transition-colors">chevron_right</span>
                   </div>
                   {saveSuccess && (
                     <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-bold px-1">
@@ -152,6 +175,39 @@ export default function SettingsPage() {
                     </select>
                   </div>
 
+                  <div className="space-y-1.5">
+                    <label htmlFor="edit-school" className="text-xs font-bold text-on-surface-variant flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[14px] text-primary">corporate_fare</span>
+                      School Name
+                    </label>
+                    <input
+                      id="edit-school"
+                      type="text"
+                      value={editSchool}
+                      onChange={(e) => setEditSchool(e.target.value)}
+                      placeholder="Enter school name"
+                      className="w-full h-11 px-4 bg-slate-50 border border-outline-variant/20 rounded-xl text-sm focus:outline-none focus:border-primary/50 transition-colors"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label htmlFor="edit-age" className="text-xs font-bold text-on-surface-variant flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[14px] text-primary">cake</span>
+                      Age
+                    </label>
+                    <input
+                      id="edit-age"
+                      type="number"
+                      value={editAge}
+                      onChange={(e) => setEditAge(Number(e.target.value))}
+                      placeholder="Enter age"
+                      className="w-full h-11 px-4 bg-slate-50 border border-outline-variant/20 rounded-xl text-sm focus:outline-none focus:border-primary/50 transition-colors"
+                      required
+                    />
+                  </div>
+
+
                   <div className="flex items-center gap-3 pt-1">
                     <button
                       type="submit"
@@ -183,30 +239,28 @@ export default function SettingsPage() {
               )}
             </section>
 
-            {/* Personalization Settings (read-only) */}
+            {/* Personalization Settings */}
             <section className="bg-white p-6 rounded-2xl border border-outline-variant/15 shadow-sm space-y-4">
               <h4 className="font-bold text-xs text-outline uppercase tracking-wider pl-1">Personalization Settings</h4>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 select-none">
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-secondary-fixed flex items-center justify-center text-secondary shrink-0">
-                    <span className="material-symbols-outlined">auto_fix_high</span>
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold text-on-surface block">AI Tutor Persona</span>
-                    <span className="text-[10px] text-on-surface-variant font-semibold">Maya (Socratic)</span>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-secondary-fixed flex items-center justify-center text-secondary shrink-0">
-                    <span className="material-symbols-outlined">schedule</span>
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold text-on-surface block">Daily Goal Target</span>
-                    <span className="text-[10px] text-on-surface-variant font-semibold">{dailyGoal} Minutes / Day (AI Suggested)</span>
-                  </div>
-                </div>
+              <div className="space-y-1.5">
+                <label htmlFor="select-persona" className="text-xs font-bold text-on-surface-variant flex items-center gap-1.5 pl-1">
+                  <span className="material-symbols-outlined text-[14px] text-primary">psychology</span>
+                  AI Tutor Persona
+                </label>
+                <select
+                  id="select-persona"
+                  value={studentTutorPersona}
+                  onChange={async (e) => {
+                    const newPersona = e.target.value;
+                    await updateProfile(studentName, studentGrade, studentSchool, studentAge, newPersona);
+                  }}
+                  className="w-full h-11 px-4 bg-slate-50 border border-outline-variant/20 rounded-xl text-xs font-semibold focus:outline-none focus:border-primary/50 transition-colors cursor-pointer"
+                >
+                  <option value="Socratic">Maya (Socratic Hints - Recommended)</option>
+                  <option value="Direct">Maya (Direct explanations & answers)</option>
+                  <option value="Friendly">Maya (Playful & encouraging buddy)</option>
+                </select>
               </div>
             </section>
 
@@ -215,15 +269,58 @@ export default function SettingsPage() {
               <h4 className="font-bold text-xs text-outline uppercase tracking-wider pl-1">Support & Privacy</h4>
               
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-outline">help</span>
-                    <span className="text-xs font-bold text-on-surface">Help Center & FAQ</span>
+                <div className="space-y-2">
+                  <div 
+                    onClick={() => setFaqOpen(!faqOpen)}
+                    className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-100 transition-all select-none"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`material-symbols-outlined transition-colors ${faqOpen ? "text-primary" : "text-outline"}`}>
+                        help
+                      </span>
+                      <span className={`text-xs font-bold transition-colors ${faqOpen ? "text-primary" : "text-on-surface"}`}>
+                        Help Center & FAQ
+                      </span>
+                    </div>
+                    <span className={`material-symbols-outlined text-outline text-[18px] transition-transform duration-200 ${faqOpen ? "rotate-180 text-primary" : ""}`}>
+                      expand_more
+                    </span>
                   </div>
-                  <span className="material-symbols-outlined text-outline text-[18px]">open_in_new</span>
+
+                  {faqOpen && (
+                    <div className="bg-slate-50/50 border border-outline-variant/10 rounded-xl p-4 space-y-4 animate-fade-in select-none">
+                      {[
+                        {
+                          q: "What can I see on my Dashboard?",
+                          a: "Your dashboard shows your daily progress, active subjects, recommended recovery steps from Maya, and quick study tools to help you resume learning instantly."
+                        },
+                        {
+                          q: "How does the Subjects section work?",
+                          a: "The subjects tab lists all your active courses. Selecting a subject lets you view its full chapter syllabus, attempt entry diagnostics, and track completed topics."
+                        },
+                        {
+                          q: "What is the AI Workspace?",
+                          a: "The AI Workspace is your interactive study room. Opening any topic instantly connects you with Maya via real-time Socratic voice to explain concepts, guide you with hints, and test your skills."
+                        }
+                      ].map((item, idx) => (
+                        <div key={idx} className="space-y-1">
+                          <p className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                            {item.q}
+                          </p>
+                          <p className="text-[10px] text-on-surface-variant leading-relaxed font-semibold pl-3">
+                            {item.a}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
+                 <div 
+                  onClick={() => router.push("/privacy")}
+                  className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors"
+                >
                   <div className="flex items-center gap-3">
                     <span className="material-symbols-outlined text-outline">privacy_tip</span>
                     <span className="text-xs font-bold text-on-surface">Privacy Policy Agreement</span>

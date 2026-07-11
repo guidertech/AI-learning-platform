@@ -16,6 +16,8 @@ export interface TopicContent {
     correctAnswerText: string;
   };
   quickReplies: string[];
+  noteImages?: string[];
+  homeworkVideoUrl?: string;
 }
 
 export const topicContents: Record<string, TopicContent> = {
@@ -43,7 +45,12 @@ export const topicContents: Record<string, TopicContent> = {
       "What is a numerator?",
       "Give me a pizza example",
       "How do I write 1 out of 4?"
-    ]
+    ],
+    noteImages: [
+      "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&auto=format&fit=crop&q=60",
+      "https://images.unsplash.com/photo-1596495578065-6e07cf507a22?w=800&auto=format&fit=crop&q=60"
+    ],
+    homeworkVideoUrl: "https://www.youtube.com/watch?v=n0FZhQ_GkKw"
   },
   "equivalent-fractions": {
     title: "Equivalent Fractions",
@@ -121,7 +128,12 @@ export const topicContents: Record<string, TopicContent> = {
       "What is the millions place?",
       "Explain place value columns",
       "Write 4 million in digits"
-    ]
+    ],
+    noteImages: [
+      "https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?w=800&auto=format&fit=crop&q=60",
+      "https://images.unsplash.com/photo-1518133680790-398535021117?w=800&auto=format&fit=crop&q=60"
+    ],
+    homeworkVideoUrl: "https://www.youtube.com/watch?v=T5qapYFpBOU"
   },
   "comparing-decimals": {
     title: "Comparing Decimals",

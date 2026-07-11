@@ -75,15 +75,20 @@ function downsampleBuffer(buffer: Float32Array, inRate: number, outRate: number)
   return result;
 }
 
-export default function MayaPanel() {
-  const { studentName, studentGrade, activeTopic, chatMessages, addChatMessage } = useLearning();
+interface MayaPanelProps {
+  autoStartVoice?: boolean;
+}
+
+export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
+  const { studentName, studentGrade, activeChapter, activeTopic, chatMessages, addChatMessage, setIsAISpeaking, activeAITranscription, setActiveAITranscription } = useLearning();
+  const firstName = studentName && studentName !== "Maya" ? studentName.split(" ")[0] : "Vishal";
 
   // Panel open/close and modes states
   const [isOpen, setIsOpen] = useState(false);
-  const [panelMode, setPanelMode] = useState<"choice" | "voice" | "text">("choice");
+  const [panelMode, setPanelMode] = useState<"choice" | "voice" | "text">("text");
   const [activeUserTranscription, setActiveUserTranscription] = useState("");
-  const [activeAITranscription, setActiveAITranscription] = useState("");
   const [displayedAIText, setDisplayedAIText] = useState("");
+
 
   // Unread indicator — bump whenever a new AI message arrives while panel is closed
   const [unreadCount, setUnreadCount] = useState(0);
@@ -103,6 +108,8 @@ export default function MayaPanel() {
   const pcmPlayerRef = useRef<PCMPlayer | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const runningAITranscript = useRef("");
+  const speakingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const accumulatedAITranscript = useRef("");
 
   useEffect(() => {
     if (chatMessages.length > prevMsgCount.current) {
@@ -118,13 +125,9 @@ export default function MayaPanel() {
   useEffect(() => {
     if (isOpen) {
       setUnreadCount(0);
-      if (isVoiceActive) {
-        setPanelMode("voice");
-      } else {
-        setPanelMode("choice");
-      }
+      setPanelMode("text");
     }
-  }, [isOpen, isVoiceActive]);
+  }, [isOpen]);
 
   // Scroll chat to bottom on every new message
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -133,6 +136,58 @@ export default function MayaPanel() {
       chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [chatMessages, isOpen]);
+
+  // Clean up voice connection on unmount (refs only)
+  useEffect(() => {
+    return () => {
+      if (ws.current) {
+        ws.current.close();
+        ws.current = null;
+      }
+      if (processorRef.current) {
+        processorRef.current.disconnect();
+        processorRef.current = null;
+      }
+      if (audioInputRef.current) {
+        audioInputRef.current.disconnect();
+        audioInputRef.current = null;
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      if (pcmPlayerRef.current) {
+        pcmPlayerRef.current.audioContext.close();
+        pcmPlayerRef.current = null;
+      }
+    };
+  }, []);
+
+  // Trigger auto-start voice call when activeTopic changes and autoStartVoice is enabled
+  useEffect(() => {
+    if (autoStartVoice && activeTopic) {
+      // First, stop any existing connection if it exists to clean up
+      stopVoiceConnection();
+
+      // Small timeout to ensure previous connection is closed and DOM/AudioContext is ready
+      const timer = setTimeout(() => {
+        setIsOpen(false);
+        setPanelMode("voice");
+        startVoiceConnection().catch((err) => {
+          console.error("Auto-start voice call failed:", err);
+        });
+      }, 500);
+
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+  }, [activeTopic, autoStartVoice]);
+
 
   // Smooth typewriter streaming transcription effect
   useEffect(() => {
@@ -229,7 +284,7 @@ export default function MayaPanel() {
       // setIsVoiceActive(true); // will be set after successful init
 
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.hostname}:3002?name=${encodeURIComponent(studentName)}&grade=${encodeURIComponent(studentGrade)}&topic=${encodeURIComponent(activeTopic)}`;
+      const wsUrl = `${protocol}//${window.location.hostname}:3002?name=${encodeURIComponent(studentName)}&grade=${encodeURIComponent(studentGrade)}&topic=${encodeURIComponent(activeTopic)}&chapter=${encodeURIComponent(activeChapter)}`;
 
       ws.current = new WebSocket(wsUrl);
 
@@ -334,6 +389,20 @@ export default function MayaPanel() {
 
         if (data.audio && pcmPlayerRef.current) {
           pcmPlayerRef.current.playChunk(data.audio);
+          
+          setIsAISpeaking(true);
+          if (speakingTimeoutRef.current) {
+            clearTimeout(speakingTimeoutRef.current);
+          }
+
+          // Calculate actual remaining time in the playback queue to match voice with video
+          const player = pcmPlayerRef.current;
+          const remainingSec = player.nextStartTime - player.audioContext.currentTime;
+          const remainingMs = Math.max(0, remainingSec * 1000);
+
+          speakingTimeoutRef.current = setTimeout(() => {
+            setIsAISpeaking(false);
+          }, remainingMs + 800);
         }
 
         if (data.interimInputTranscription) {
@@ -346,12 +415,14 @@ export default function MayaPanel() {
           setActiveUserTranscription(data.inputTranscription);
           setActiveAITranscription("thinking...");
           runningAITranscript.current = "";
+          accumulatedAITranscript.current = "";
           addChatMessage(data.inputTranscription, "USER");
         }
 
         if (data.outputTranscription) {
-          setActiveAITranscription(data.outputTranscription);
-          runningAITranscript.current = data.outputTranscription;
+          accumulatedAITranscript.current += data.outputTranscription;
+          setActiveAITranscription(accumulatedAITranscript.current);
+          runningAITranscript.current = accumulatedAITranscript.current;
         }
 
         if (data.turnComplete) {
@@ -359,6 +430,7 @@ export default function MayaPanel() {
             addChatMessage(runningAITranscript.current, "AI");
             runningAITranscript.current = "";
           }
+          accumulatedAITranscript.current = "";
         }
 
         if (data.interrupted) {
@@ -366,6 +438,7 @@ export default function MayaPanel() {
             addChatMessage(runningAITranscript.current + "...", "AI");
             runningAITranscript.current = "";
           }
+          accumulatedAITranscript.current = "";
         }
 
         if (data.error) {
@@ -423,6 +496,13 @@ export default function MayaPanel() {
     setInterimUserText("");
     setActiveUserTranscription("");
     setActiveAITranscription("");
+    accumulatedAITranscript.current = "";
+
+    if (speakingTimeoutRef.current) {
+      clearTimeout(speakingTimeoutRef.current);
+      speakingTimeoutRef.current = null;
+    }
+    setIsAISpeaking(false);
   };
 
   return (
@@ -491,14 +571,12 @@ export default function MayaPanel() {
           </div>
         )}
 
-        {/* Desktop Dynamic Body Modes */}
         {panelMode === "choice" && (
           <div className="flex-1 p-6 flex flex-col justify-center gap-6 bg-[#f8f9ff]">
             <div className="text-center mb-2">
-              <h3 className="font-bold text-base text-on-surface">How would you like to study?</h3>
-              <p className="text-xs text-on-surface-variant mt-2 px-4 leading-relaxed">
-                Select voice to talk live, or text to type questions and view explanations.
-              </p>
+              <h3 className="font-bold text-base text-on-surface leading-relaxed">
+                Hey {firstName}! Chalo aaj ek mazedar tarike se padhte hain. Mujhse baat karni hai ya chat?
+              </h3>
             </div>
 
             {/* Voice Mode Card */}
@@ -709,14 +787,12 @@ export default function MayaPanel() {
           </div>
         )}
 
-        {/* Mobile Dynamic Body Modes */}
         {panelMode === "choice" && (
           <div className="flex-1 p-5 flex flex-col justify-center gap-5 bg-[#f8f9ff]">
             <div className="text-center mb-2">
-              <h3 className="font-bold text-base text-on-surface">How would you like to study?</h3>
-              <p className="text-xs text-on-surface-variant mt-2 px-2 leading-relaxed">
-                Select voice to talk live, or text to type questions and view explanations.
-              </p>
+              <h3 className="font-bold text-base text-on-surface leading-relaxed">
+                Hey {firstName}! Chalo aaj ek mazedar tarike se padhte hain. Mujhse baat karni hai ya chat?
+              </h3>
             </div>
 
             {/* Voice Card */}
