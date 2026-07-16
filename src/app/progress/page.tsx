@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useLearning } from "@/context/LearningContext";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
-import { mockSubjectProficiencies } from "@/lib/mock/progress";
 
 // Map display name → subject page id
 const subjectIdMap: Record<string, string> = {
@@ -31,10 +30,10 @@ const gradeLabel = (score: number) => {
 
 export default function ProgressPage() {
   const router = useRouter();
-  const { studentName, studentGrade, percentComplete, weaknesses } = useLearning();
+  const { studentName, studentGrade, percentComplete, weaknesses, subjectProficiencies } = useLearning();
 
   const avgScore = Math.round(
-    mockSubjectProficiencies.reduce((s, p) => s + p.score, 0) / mockSubjectProficiencies.length
+    subjectProficiencies.reduce((s, p) => s + p.score, 0) / subjectProficiencies.length
   );
 
   return (
@@ -74,7 +73,7 @@ export default function ProgressPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {mockSubjectProficiencies.map((sub, idx) => {
+            {subjectProficiencies.map((sub, idx) => {
               const grade = gradeLabel(sub.score);
               const subjectId = subjectIdMap[sub.name];
               return (

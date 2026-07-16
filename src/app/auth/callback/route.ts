@@ -15,7 +15,7 @@ export async function GET(request: Request) {
       
       // Check if student profile exists
       const { data: profile } = await supabase
-        .from("student_profiles")
+        .from("profiles")
         .select("id")
         .eq("id", userId)
         .single();

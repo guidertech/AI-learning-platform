@@ -8,8 +8,8 @@ export default function QuickActions() {
 
   const actions = [
     { name: "AI Homework", icon: "assignment", href: "/homework", color: "text-[#5341cd] bg-[#5341cd]/5 border-[#5341cd]/10" },
-    { name: "Maya Insights", icon: "psychology", href: "/weakness-analysis/latest", color: "text-secondary bg-secondary/5 border-secondary/10" },
-    { name: "Learning Journey", icon: "timeline", href: "/progress", color: "text-[#10b981] bg-[#10b981]/5 border-[#10b981]/10" },
+    { name: "Brain Profile", icon: "psychology", href: "/weakness-analysis/latest", color: "text-secondary bg-secondary/5 border-secondary/10" },
+    { name: "Report", icon: "analytics", href: "/progress", color: "text-[#10b981] bg-[#10b981]/5 border-[#10b981]/10" },
     { name: "Practice Quiz", icon: "quiz", href: "/quiz/latest", color: "text-[#f59e0b] bg-[#f59e0b]/5 border-[#f59e0b]/10" }
   ];
 

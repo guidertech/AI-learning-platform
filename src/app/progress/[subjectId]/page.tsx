@@ -6,7 +6,6 @@ import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import { mockSubjects } from "@/lib/mock/subjects";
 import { mockChapters } from "@/lib/mock/chapters";
-import { mockSubjectProficiencies } from "@/lib/mock/progress";
 import { useLearning } from "@/context/LearningContext";
 
 // Mock per-topic completion status (in a real app, comes from DB)
@@ -47,7 +46,7 @@ interface SubjectReportPageProps {
 
 export default function SubjectReportPage({ params }: SubjectReportPageProps) {
   const router = useRouter();
-  const { weaknesses } = useLearning();
+  const { weaknesses, subjectProficiencies } = useLearning();
   const { subjectId } = use(params);
 
   const subject = mockSubjects.find((s) => s.id === subjectId);
@@ -55,7 +54,7 @@ export default function SubjectReportPage({ params }: SubjectReportPageProps) {
 
   const theme = subjectTheme[subjectId] || subjectTheme["sub-math"];
   const chapters = mockChapters[subjectChapterKey[subjectId]] || [];
-  const proficiency = mockSubjectProficiencies.find((p) => p.name === subject.name);
+  const proficiency = subjectProficiencies.find((p) => p.name === subject.name);
 
   interface TestLogEntry {
     chapterId: string;

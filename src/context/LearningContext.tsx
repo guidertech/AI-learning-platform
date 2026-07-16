@@ -4,6 +4,8 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { Message, Weakness } from "@/types/learning";
 import { mockWeaknesses, initialChatMessages } from "@/lib/mock/learning";
 import { supabase, hasSupabase, getLocalProfileId } from "@/lib/supabase";
+import { SubjectProficiency } from "@/types/progress";
+import { mockChapters } from "@/lib/mock/chapters";
 
 interface LearningContextType {
   studentMins: number;
@@ -33,6 +35,58 @@ interface LearningContextType {
   setIsAISpeaking: (isSpeaking: boolean) => void;
   activeAITranscription: string;
   setActiveAITranscription: (text: string) => void;
+  subjectProficiencies: SubjectProficiency[];
+}
+
+const baseScores = {
+  "Mathematics": 85,
+  "Science": 62,
+  "Social Science": 45,
+  "English": 78
+};
+
+const baseColors = {
+  "Mathematics": "bg-primary",
+  "Science": "bg-[#0ea5e9]",
+  "Social Science": "bg-[#f59e0b]",
+  "English": "bg-[#10b981]"
+};
+
+const subjectNameMap: Record<string, string> = {
+  "sub-math": "Mathematics",
+  "sub-sci": "Science",
+  "sub-hist": "Social Science",
+  "sub-eng": "English"
+};
+
+function getSubjectForTopic(topicName: string): string {
+  const cleanTopic = topicName.trim().toLowerCase();
+  for (const [subjectId, chapters] of Object.entries(mockChapters)) {
+    for (const chapter of chapters) {
+      for (const topic of chapter.topics) {
+        if (
+          topic.title.toLowerCase() === cleanTopic || 
+          topic.slug.toLowerCase() === cleanTopic ||
+          topic.id.toLowerCase() === cleanTopic
+        ) {
+          return subjectId;
+        }
+      }
+    }
+  }
+  if (cleanTopic.includes("fraction") || cleanTopic.includes("number") || cleanTopic.includes("addition") || cleanTopic.includes("division")) {
+    return "sub-math";
+  }
+  if (cleanTopic.includes("photosynthesis") || cleanTopic.includes("gravity") || cleanTopic.includes("force") || cleanTopic.includes("body") || cleanTopic.includes("science")) {
+    return "sub-sci";
+  }
+  if (cleanTopic.includes("constitution") || cleanTopic.includes("bagh") || cleanTopic.includes("revolt") || cleanTopic.includes("revolution") || cleanTopic.includes("history")) {
+    return "sub-hist";
+  }
+  if (cleanTopic.includes("noun") || cleanTopic.includes("verb") || cleanTopic.includes("sentence") || cleanTopic.includes("comma") || cleanTopic.includes("word") || cleanTopic.includes("english")) {
+    return "sub-eng";
+  }
+  return "sub-math";
 }
 
 const LearningContext = createContext<LearningContextType | undefined>(undefined);
@@ -52,25 +106,42 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
   const [chatMessages, setChatMessages] = useState<Message[]>(initialChatMessages);
   const [isAISpeaking, setIsAISpeaking] = useState(false);
   const [activeAITranscription, setActiveAITranscription] = useState("");
+  const [subjectProficiencies, setSubjectProficiencies] = useState<SubjectProficiency[]>([
+    { name: "Mathematics", score: 85, colorClass: "bg-primary" },
+    { name: "Science", score: 62, colorClass: "bg-[#0ea5e9]" },
+    { name: "Social Science", score: 45, colorClass: "bg-[#f59e0b]" },
+    { name: "English", score: 78, colorClass: "bg-[#10b981]" }
+  ]);
 
-  const profileId = getLocalProfileId();
+  const [profileId, setProfileId] = useState<string>(() => {
+    if (typeof window === "undefined") return "server-temp-id";
+    return getLocalProfileId();
+  });
 
   // Load from Supabase or localStorage
   useEffect(() => {
     async function loadData() {
       if (hasSupabase && supabase) {
         try {
+          // Check if there is an authenticated user first
+          const { data: { user } } = await supabase.auth.getUser();
+          const activeProfileId = user ? user.id : getLocalProfileId();
+          
+          if (activeProfileId !== profileId) {
+            setProfileId(activeProfileId);
+          }
+
           // 1. Fetch Profile
           let { data: profile, error } = await supabase
             .from("profiles")
             .select("*")
-            .eq("id", profileId)
+            .eq("id", activeProfileId)
             .single();
 
           if (error && error.code === "PGRST116") {
             // Profile doesn't exist, create it
             const defaultProfile = {
-              id: profileId,
+              id: activeProfileId,
               full_name: "Maya Sharma",
               current_class: "Grade 5",
               school: "St. Mary's Academy",
@@ -108,7 +179,7 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
           const { data: messages } = await supabase
             .from("tutor_messages")
             .select("*")
-            .eq("profile_id", profileId)
+            .eq("profile_id", activeProfileId)
             .order("created_at", { ascending: true });
 
           if (messages && messages.length > 0) {
@@ -121,7 +192,7 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
           } else {
             // Seed first message
             await supabase.from("tutor_messages").insert([{
-              profile_id: profileId,
+              profile_id: activeProfileId,
               sender: "AI",
               text: "Hello! I'm Maya, your learning companion. We are studying Chapter 4: Fractions today. What can I help you understand?"
             }]);
@@ -131,7 +202,7 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
           const { data: dbWeaknesses } = await supabase
             .from("weaknesses")
             .select("*")
-            .eq("profile_id", profileId);
+            .eq("profile_id", activeProfileId);
 
           if (dbWeaknesses && dbWeaknesses.length > 0) {
             setWeaknesses(dbWeaknesses.map((w: any) => ({
@@ -143,13 +214,51 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
           } else {
             // Seed initial weaknesses if empty
             const seedWeaknesses = mockWeaknesses.map(w => ({
-              profile_id: profileId,
+              profile_id: activeProfileId,
               skill_name: w.skillName,
               score: w.score,
               notes: w.notes
             }));
             await supabase.from("weaknesses").insert(seedWeaknesses);
           }
+
+          // 4. Fetch Quiz Attempts & Compute Proficiencies
+          const { data: dbAttempts } = await supabase
+            .from("quiz_attempts")
+            .select("*")
+            .eq("profile_id", activeProfileId);
+
+          const subjectAttempts: Record<string, number[]> = {
+            "Mathematics": [],
+            "Science": [],
+            "Social Science": [],
+            "English": []
+          };
+
+          if (dbAttempts && dbAttempts.length > 0) {
+            dbAttempts.forEach((attempt: any) => {
+              const subjectKey = getSubjectForTopic(attempt.topic_id);
+              const subjectName = subjectNameMap[subjectKey];
+              if (subjectName && subjectAttempts[subjectName]) {
+                subjectAttempts[subjectName].push(Number(attempt.score));
+              }
+            });
+          }
+
+          const computedProficiencies = Object.keys(baseScores).map((subjectName) => {
+            const scores = subjectAttempts[subjectName];
+            const avgScore = scores.length > 0 
+              ? Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length)
+              : baseScores[subjectName as keyof typeof baseScores];
+            
+            return {
+              name: subjectName,
+              score: avgScore,
+              colorClass: baseColors[subjectName as keyof typeof baseColors]
+            };
+          });
+          setSubjectProficiencies(computedProficiencies);
+
         } catch (e) {
           console.warn("Supabase loading error, falling back to localStorage:", e);
           loadLocalStorageFallback();
@@ -189,6 +298,36 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
 
     const savedPersona = localStorage.getItem("classorbit_persona");
     if (savedPersona) setStudentTutorPersona(savedPersona);
+
+    const localAttempts = localStorage.getItem("classorbit_quiz_attempts");
+    const attempts = localAttempts ? JSON.parse(localAttempts) : [];
+    const subjectAttempts: Record<string, number[]> = {
+      "Mathematics": [],
+      "Science": [],
+      "Social Science": [],
+      "English": []
+    };
+    attempts.forEach((attempt: any) => {
+      const subjectKey = getSubjectForTopic(attempt.topic_id);
+      const subjectName = subjectNameMap[subjectKey];
+      if (subjectName && subjectAttempts[subjectName]) {
+        subjectAttempts[subjectName].push(Number(attempt.score));
+      }
+    });
+
+    const computedProficiencies = Object.keys(baseScores).map((subjectName) => {
+      const scores = subjectAttempts[subjectName];
+      const avgScore = scores.length > 0 
+        ? Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length)
+        : baseScores[subjectName as keyof typeof baseScores];
+      
+      return {
+        name: subjectName,
+        score: avgScore,
+        colorClass: baseColors[subjectName as keyof typeof baseColors]
+      };
+    });
+    setSubjectProficiencies(computedProficiencies);
   };
 
   const updateProfile = async (name: string, grade: string, school: string, age: number, tutorPersona: string) => {
@@ -325,11 +464,82 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
 
   const submitQuizScore = async (score: number) => {
     if (hasSupabase && supabase) {
-      await supabase.from("quiz_attempts").insert([{
-        profile_id: profileId,
-        topic_id: activeTopic,
-        score
-      }]);
+      try {
+        await supabase.from("quiz_attempts").insert([{
+          profile_id: profileId,
+          topic_id: activeTopic,
+          score
+        }]);
+
+        // Re-fetch and re-calculate subject proficiencies
+        const { data: dbAttempts } = await supabase
+          .from("quiz_attempts")
+          .select("*")
+          .eq("profile_id", profileId);
+
+        if (dbAttempts) {
+          const subjectAttempts: Record<string, number[]> = {
+            "Mathematics": [],
+            "Science": [],
+            "Social Science": [],
+            "English": []
+          };
+          dbAttempts.forEach((attempt: any) => {
+            const subjectKey = getSubjectForTopic(attempt.topic_id);
+            const subjectName = subjectNameMap[subjectKey];
+            if (subjectName && subjectAttempts[subjectName]) {
+              subjectAttempts[subjectName].push(Number(attempt.score));
+            }
+          });
+          const computedProficiencies = Object.keys(baseScores).map((subjectName) => {
+            const scores = subjectAttempts[subjectName];
+            const avgScore = scores.length > 0 
+              ? Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length)
+              : baseScores[subjectName as keyof typeof baseScores];
+            
+            return {
+              name: subjectName,
+              score: avgScore,
+              colorClass: baseColors[subjectName as keyof typeof baseColors]
+            };
+          });
+          setSubjectProficiencies(computedProficiencies);
+        }
+      } catch (err) {
+        console.error("Failed to submit score:", err);
+      }
+    } else {
+      const localAttempts = localStorage.getItem("classorbit_quiz_attempts");
+      const attempts = localAttempts ? JSON.parse(localAttempts) : [];
+      attempts.push({ topic_id: activeTopic, score });
+      localStorage.setItem("classorbit_quiz_attempts", JSON.stringify(attempts));
+      
+      const subjectAttempts: Record<string, number[]> = {
+        "Mathematics": [],
+        "Science": [],
+        "Social Science": [],
+        "English": []
+      };
+      attempts.forEach((attempt: any) => {
+        const subjectKey = getSubjectForTopic(attempt.topic_id);
+        const subjectName = subjectNameMap[subjectKey];
+        if (subjectName && subjectAttempts[subjectName]) {
+          subjectAttempts[subjectName].push(Number(attempt.score));
+        }
+      });
+      const computedProficiencies = Object.keys(baseScores).map((subjectName) => {
+        const scores = subjectAttempts[subjectName];
+        const avgScore = scores.length > 0 
+          ? Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length)
+          : baseScores[subjectName as keyof typeof baseScores];
+        
+        return {
+          name: subjectName,
+          score: avgScore,
+          colorClass: baseColors[subjectName as keyof typeof baseColors]
+        };
+      });
+      setSubjectProficiencies(computedProficiencies);
     }
 
     if (score >= 80) {
@@ -439,7 +649,8 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
         isAISpeaking,
         setIsAISpeaking,
         activeAITranscription,
-        setActiveAITranscription
+        setActiveAITranscription,
+        subjectProficiencies
       }}
     >
       {children}

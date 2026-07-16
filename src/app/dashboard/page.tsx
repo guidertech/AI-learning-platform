@@ -9,10 +9,9 @@ import ContinueLearningCard from "@/components/dashboard/ContinueLearningCard";
 import QuickActions from "@/components/dashboard/QuickActions";
 import AIRecommendationCard from "@/components/dashboard/AIRecommendationCard";
 import LoadingSkeleton from "@/components/layout/LoadingSkeleton";
-import { mockSubjectProficiencies } from "@/lib/mock/progress";
 
 export default function DashboardPage() {
-  const { studentName, percentComplete, activeSubject, activeChapter, activeTopic } = useLearning();
+  const { studentName, percentComplete, activeSubject, activeChapter, activeTopic, subjectProficiencies, weaknesses } = useLearning();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,6 +19,13 @@ export default function DashboardPage() {
     const timer = setTimeout(() => setLoading(false), 600);
     return () => clearTimeout(timer);
   }, []);
+
+  const hasWeakness = weaknesses && weaknesses.length > 0;
+  const recommendationText = hasWeakness
+    ? `I checked your homework details. Let's finish the Concept Recovery for ${weaknesses[0].skillName} to get 100% chapter mastery today!`
+    : `You are doing great! Let's continue studying your active topic, "${activeTopic}", to stay ahead!`;
+  const actionLabel = hasWeakness ? "Start Recovery Session" : "Resume Learning";
+  const actionHref = hasWeakness ? "/recovery/mixed-numbers" : "/learning/fractions";
 
   return (
     <PageContainer>
@@ -47,16 +53,16 @@ export default function DashboardPage() {
             {/* Maya AI Suggestion Card */}
             <AIRecommendationCard 
               studentName={studentName}
-              recommendationText="I checked your homework details. Let's finish the Concept Recovery for Dividing Mixed Numbers to get 100% chapter mastery today!"
-              actionLabel="Start Recovery Session"
-              actionHref="/recovery/mixed-numbers"
+              recommendationText={recommendationText}
+              actionLabel={actionLabel}
+              actionHref={actionHref}
             />
 
             {/* Proficiencies preview section */}
             <section className="bg-white p-6 rounded-[28px] border border-outline-variant/15 shadow-sm space-y-4">
               <h3 className="font-bold text-sm text-on-surface">Subject Analytics Overview</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 select-none">
-                {mockSubjectProficiencies.map((sub, idx) => (
+                {subjectProficiencies.map((sub, idx) => (
                   <div key={idx} className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 space-y-2">
                     <div className="flex justify-between items-center text-xs font-bold text-on-surface">
                       <span>{sub.name}</span>

@@ -69,7 +69,7 @@ export async function updateSession(request: NextRequest) {
   if (user && pathname === "/login") {
     // If authenticated, check if student profile exists
     const { data: profile } = await supabase
-      .from("student_profiles")
+      .from("profiles")
       .select("id")
       .eq("id", user.id)
       .single();

@@ -9,7 +9,7 @@ export default function BottomNav() {
 
   const navItems = [
     { name: "Home", href: "/dashboard", icon: "home" },
-    { name: "Learn", href: "/subjects", icon: "school" },
+    { name: "Subjects", href: "/subjects", icon: "school" },
     { name: "AI Tutor", href: "/learning/fractions", icon: "psychology" },
     { name: "Profile", href: "/settings", icon: "person" }
   ];

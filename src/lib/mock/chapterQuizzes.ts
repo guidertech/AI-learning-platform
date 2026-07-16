@@ -90,7 +90,7 @@ export const chapterQuizzes: ChapterQuizData[] = [
       { id: "ch3-end-4", topic: "Word Problems", question: "48 x 6 = ?", options: ["264", "288", "294", "278"], correctIndex: 1, explanation: "Answer is 288." },
       { id: "ch3-end-5", topic: "Word Problems", question: "135 / 5 = ?", options: ["25", "27", "30", "33"], correctIndex: 1, explanation: "Result is 27." },
     ],
-  },
+  }, 
   {
     chapterId: "ch-4",
     chapterTitle: "Fractions & Decimals",

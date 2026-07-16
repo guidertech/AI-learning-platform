@@ -39,10 +39,6 @@ export default function Topbar({ title, subtitle, showSearch = false, showBack =
         >
           <span className="material-symbols-outlined">settings</span>
         </button>
-        <button className="p-2 text-on-surface-variant hover:text-primary transition-colors relative cursor-pointer">
-          <span className="material-symbols-outlined">notifications</span>
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500"></span>
-        </button>
         <div 
           onClick={() => router.push("/settings")}
           className="w-9 h-9 rounded-full overflow-hidden border border-outline-variant/20 bg-primary-fixed shrink-0 cursor-pointer hover:border-primary transition-all"
