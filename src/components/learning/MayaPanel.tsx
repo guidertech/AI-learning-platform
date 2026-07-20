@@ -10,6 +10,14 @@ import { useLearning } from "@/context/LearningContext";
 import AITeacherCard from "@/components/learning/AITeacherCard";
 import AskMayaInput from "@/components/learning/AskMayaInput";
 
+const TypingIndicator = () => (
+  <div className="flex items-center gap-1.5 py-2">
+    <div className="typing-dot typing-dot-1" />
+    <div className="typing-dot typing-dot-2" />
+    <div className="typing-dot typing-dot-3" />
+  </div>
+);
+
 class PCMPlayer {
   audioContext: AudioContext;
   nextStartTime: number;
@@ -137,6 +145,22 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
     }
   }, [chatMessages, isOpen]);
 
+  // Listen for global stop-ai-speech event (e.g. when topic test opens)
+  useEffect(() => {
+    const handleStopSpeech = () => {
+      console.log("[MayaPanel] Received stop-ai-speech event. Halting all speech & voice connection.");
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      stopVoiceConnection();
+    };
+
+    window.addEventListener("stop-ai-speech", handleStopSpeech);
+    return () => {
+      window.removeEventListener("stop-ai-speech", handleStopSpeech);
+    };
+  }, []);
+
   // Clean up voice connection on unmount (refs only)
   useEffect(() => {
     return () => {
@@ -178,7 +202,7 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
         setIsOpen(false);
         setPanelMode("voice");
         startVoiceConnection().catch((err) => {
-          console.error("Auto-start voice call failed:", err);
+          console.warn("Auto-start voice call notice:", err);
         });
       }, 500);
 
@@ -220,13 +244,6 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
     return () => clearInterval(interval);
   }, [activeAITranscription]);
 
-  const TypingIndicator = () => (
-    <div className="flex items-center gap-1.5 py-2">
-      <div className="typing-dot typing-dot-1" />
-      <div className="typing-dot typing-dot-2" />
-      <div className="typing-dot typing-dot-3" />
-    </div>
-  );
 
   // ── Drag-to-close on mobile ─────────────────────────────────────────────
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -375,7 +392,7 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
           setIsVoiceActive(true); // mark active after init
           console.log("[Client] Voice pipeline is fully active!");
         } catch (err: unknown) {
-          console.error("[Client] Voice call audio init error:", err);
+          console.warn("[Client] Voice call audio init notice:", err);
           const errorMsg = err instanceof Error ? err.message : String(err);
           window.alert("Voice Call Error: " + errorMsg);
           setVoiceError("Audio initialization failed: " + errorMsg);
@@ -442,7 +459,7 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
         }
 
         if (data.error) {
-          console.error("[Client] Received error from server:", data.error);
+          console.warn("[Client] Received error from server:", data.error);
           setVoiceError("Server error: " + data.error);
         }
       };
@@ -453,12 +470,12 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
       };
 
       ws.current.onerror = (err) => {
-        console.error("[Client] WebSocket error event:", err);
+        console.warn("[Client] WebSocket connection event:", err);
         setVoiceError("Connection error.");
         stopVoiceConnection();
       };
     } catch (err) {
-      console.error("startVoiceConnection error", err);
+      console.warn("startVoiceConnection notice:", err);
       const errorMsg = err instanceof Error ? err.message : String(err);
       setVoiceError("Failed to connect: " + errorMsg);
       stopVoiceConnection();
@@ -705,7 +722,26 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
                         ? "bg-slate-50 border-outline-variant/10 rounded-tl-none text-on-surface"
                         : "bg-primary text-white border-transparent rounded-tr-none"
                     }`}>
-                      {msg.text}
+                      <div className="flex items-start justify-between gap-2">
+                        <span>{msg.text}</span>
+                        {isAI && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+                              window.speechSynthesis.cancel();
+                              const cleanText = msg.text.replace(/[*_#`~]/g, "").replace(/https?:\/\/\S+/g, "");
+                              const utterance = new SpeechSynthesisUtterance(cleanText);
+                              utterance.rate = 0.95;
+                              window.speechSynthesis.speak(utterance);
+                            }}
+                            className="text-primary hover:text-primary-container p-0.5 rounded transition-colors shrink-0 cursor-pointer"
+                            title="Listen to Maya"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">volume_up</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
