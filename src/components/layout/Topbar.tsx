@@ -1,23 +1,22 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
-import { useLearning } from "@/context/LearningContext";
+import {useRouter} from "next/navigation";
+import LanguageSelector from "@/components/translation/LanguageSelector";
 
 interface TopbarProps {
-  title: string;
-  subtitle?: string;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
   showSearch?: boolean;
   showBack?: boolean;
 }
 
-export default function Topbar({ title, subtitle, showSearch = false, showBack = false }: TopbarProps) {
+export default function Topbar({ title, subtitle, showBack = false }: TopbarProps) {
   const router = useRouter();
-  const { studentName } = useLearning();
 
   return (
-    <header className="sticky top-0 z-20 bg-white/85 backdrop-blur-md flex justify-between items-center w-full px-4 md:px-8 h-16 md:h-20 border-b border-outline-variant/10 select-none">
-      <div className="flex items-center gap-4">
+    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md flex justify-between items-center w-full px-4 md:px-8 h-16 md:h-20 border-b border-outline-variant/10 select-none">
+      <div className="flex min-w-0 items-center gap-4">
         {showBack && (
           <button 
             onClick={() => router.back()}
@@ -32,15 +31,23 @@ export default function Topbar({ title, subtitle, showSearch = false, showBack =
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex shrink-0 items-center gap-2 md:gap-3">
+        <LanguageSelector />
         <button 
           onClick={() => router.push("/settings")}
+          aria-label="Open settings"
           className="p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
         >
           <span className="material-symbols-outlined">settings</span>
         </button>
         <div 
           onClick={() => router.push("/settings")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") router.push("/settings");
+          }}
+          aria-label="Open student profile"
           className="w-9 h-9 rounded-full overflow-hidden border border-outline-variant/20 bg-primary-fixed shrink-0 cursor-pointer hover:border-primary transition-all"
         >
           <img 

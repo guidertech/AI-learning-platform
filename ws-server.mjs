@@ -3,7 +3,16 @@ import { WebSocketServer } from "ws";
 import { GoogleGenAI, Modality } from "@google/genai";
 import dotenv from "dotenv";
 
-dotenv.config();
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, ".env.local") });
+dotenv.config({ path: path.resolve(__dirname, ".env") });
+
+console.log("[Server] Starting Voice Server...");
+console.log("[Server] Directory:", __dirname);
+console.log("[Server] GEMINI_API_KEY loaded?:", !!process.env.GEMINI_API_KEY);
 
 const port = 3002;
 const server = createServer((req, res) => {
@@ -36,12 +45,13 @@ wss.on("connection", async (clientWs, request) => {
   console.log("New client connected via WebSocket to Standalone Audio Server");
 
   const reqUrl = new URL(request.url || "", `http://${request.headers.host || "localhost"}`);
-  const studentName = reqUrl.searchParams.get("name") || "Maya";
+  const studentName = reqUrl.searchParams.get("name") || "Student";
   const studentGrade = reqUrl.searchParams.get("grade") || "Grade 5";
-  const activeTopic = reqUrl.searchParams.get("topic") || "Fractions";
+  const activeTopic = reqUrl.searchParams.get("topic") || "Topic";
   const activeChapter = reqUrl.searchParams.get("chapter") || "Chapter";
-
-  console.log(`[Server] Session details: Student: ${studentName}, Grade: ${studentGrade}, Chapter: ${activeChapter}, Topic: ${activeTopic}`);
+  const locale = reqUrl.searchParams.get("locale") === "hi-IN" ? "hi-IN" : "en-IN";
+  const responseLanguage = locale === "hi-IN" ? "Hindi using Devanagari script" : "English";
+  console.log(`[Server] Session details: Student: ${studentName}, Grade: ${studentGrade}, Chapter: ${activeChapter}, Topic: ${activeTopic}, Language: ${locale}`);
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -68,15 +78,19 @@ wss.on("connection", async (clientWs, request) => {
             }
           }
         },
+        inputAudioTranscription: {},
+        outputAudioTranscription: {},
         systemInstruction: `You are Maya, a professional, friendly, and helpful real-time AI teaching assistant.
 You are talking to a student named ${studentName} who is in ${studentGrade}.
 The active chapter is "${activeChapter}" and the active topic is "${activeTopic}".
 
-CRITICAL GUIDELINES:
-1. Speak strictly in clean, friendly Hindi/Hinglish with a warm, natural tone suitable for a 10-year-old child.
-2. Teach the topic step-by-step. Explain one small part of the concept, and then immediately ask a simple question in Hindi to check the student's understanding before moving forward.
-3. NEVER give the direct answer to any problem. Guide the student Socratically.
-4. Keep your answers brief, engaging, and highly conversational. Avoid very long explanations.`
+TEACHING GUIDELINES:
+1. Speak strictly in clear, friendly ${responseLanguage} with a warm, natural tone suitable for a school student.
+2. Start by greeting ${studentName} and introducing the chapter "${activeChapter}" and topic "${activeTopic}".
+3. Explain the first small basic concept of "${activeTopic}" step-by-step.
+4. Immediately ask a simple question in ${responseLanguage} to check ${studentName}'s understanding.
+5. NEVER give the direct answer to any problem. Guide the student Socratically.
+6. Keep your answers brief, engaging, and highly conversational.`
       },
       callbacks: {
         onmessage: (message) => {
@@ -134,7 +148,7 @@ CRITICAL GUIDELINES:
     }
 
     if (geminiSession) {
-      const greetingPrompt = `Chaliye aaj hum "${activeChapter}" ka topic "${activeTopic}" padhte hain! Main aapko iske baare mein samjhaungi aur aapse sawal poochungi. chalo shuru karte hain. please explain the first basic concept of "${activeTopic}" briefly in friendly Hindi (using Devanagari transliteration / Hinglish or clean Hindi words) and ask me a simple question to test my understanding.`;
+      const greetingPrompt = `Greet ${studentName} naturally in ${responseLanguage}. Then briefly introduce the first concept of "${activeTopic}" and ask one simple question to test understanding.`;
       geminiSession.sendRealtimeInput({
         text: greetingPrompt
       });

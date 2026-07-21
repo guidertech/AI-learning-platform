@@ -1,20 +1,40 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import {useRouter} from "next/navigation";
 import { useLearning } from "@/context/LearningContext";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import { createClient } from "@/lib/supabase/client";
+import LanguageSelector from "@/components/translation/LanguageSelector";
+
+const englishText = (text: string) => text;
 
 const GRADE_OPTIONS = [
   "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5",
-  "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10",
-  "Grade 11", "Grade 12"
+  "Grade 6", "Grade 7", "Grade 8"
 ];
 
 export default function SettingsPage() {
   const router = useRouter();
+  const labels = {
+    title: englishText("Settings & Preferences"),
+    subtitle: englishText("Manage student personalization details and goals"),
+    studentSummary: englishText("Grade __GRADE__ · Age __AGE__"),
+    logout: englishText("Logout Account"), studentProfile: englishText("Student Profile"),
+    editProfile: englishText("Edit Student Profile Details"), fullName: englishText("Full Name"),
+    gradeClass: englishText("Grade / Class"), grade: englishText("Grade __GRADE__"),
+    school: englishText("School"), schoolName: englishText("School Name"), age: englishText("Age"),
+    yearsOld: englishText("__AGE__ years old"), profileUpdated: englishText("Profile updated successfully!"),
+    enterFullName: englishText("Enter student full name"), enterSchoolName: englishText("Enter school name"), enterAge: englishText("Enter age"),
+    saving: englishText("Saving..."), saveChanges: englishText("Save Changes"), cancel: englishText("Cancel"),
+    personalization: englishText("Personalization Settings"), tutorPersona: englishText("AI Tutor Persona"),
+    personaSocratic: englishText("Maya (Socratic hints — recommended)"), personaDirect: englishText("Maya (Direct explanations and answers)"), personaFriendly: englishText("Maya (Playful and encouraging buddy)"),
+    supportPrivacy: englishText("Support & Privacy"), helpFaq: englishText("Help Center & FAQ"), privacyPolicy: englishText("Privacy Policy Agreement"),
+    faqDashboardQuestion: englishText("What can I see on my Dashboard?"), faqDashboardAnswer: englishText("Your dashboard shows your progress, active subjects, Maya's recommendations, and quick study tools."),
+    faqSubjectsQuestion: englishText("How does the Subjects section work?"), faqSubjectsAnswer: englishText("Choose a subject to view its chapters, take diagnostics, and track completed topics."),
+    faqWorkspaceQuestion: englishText("What is the AI Workspace?"), faqWorkspaceAnswer: englishText("The AI Workspace connects you with Maya to learn concepts through explanations, hints, voice, and practice."),
+  };
   const { studentName, studentGrade, studentSchool, studentAge, studentTutorPersona, resetChat, updateProfile } = useLearning();
   const supabase = createClient();
 
@@ -63,8 +83,8 @@ export default function SettingsPage() {
   return (
     <PageContainer>
       <Topbar 
-        title="Settings & Preferences" 
-        subtitle="Manage student personalization details and goals" 
+        title={labels.title}
+        subtitle={labels.subtitle}
         showBack={true}
       />
 
@@ -80,14 +100,14 @@ export default function SettingsPage() {
                 </div>
               </div>
               <h3 className="font-bold text-base text-on-surface mt-4">{studentName}</h3>
-              <p className="text-xs text-on-surface-variant font-medium mt-0.5">{studentGrade} · Age {studentAge}</p>
+              <p className="text-xs text-on-surface-variant font-medium mt-0.5">{labels.studentSummary.replace("__GRADE__", studentGrade.match(/\d+/)?.[0] ?? studentGrade).replace("__AGE__", String(studentAge || 0))}</p>
               <p className="text-[10px] text-outline font-semibold mt-1 max-w-full truncate">{studentSchool}</p>
 
               <button 
                 onClick={handleLogout}
                 className="w-full mt-8 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs py-3 rounded-xl transition-all cursor-pointer border border-red-100 flex items-center justify-center gap-2"
               >
-                <span className="material-symbols-outlined text-[16px]">logout</span> Logout Account
+                <span className="material-symbols-outlined text-[16px]">logout</span> {labels.logout}
               </button>
             </section>
           </div>
@@ -97,7 +117,7 @@ export default function SettingsPage() {
 
             {/* Profile Card - View or Edit */}
             <section className="bg-white p-6 rounded-2xl border border-outline-variant/15 shadow-sm space-y-4">
-              <h4 className="font-bold text-xs text-outline uppercase tracking-wider pl-1">Student Profile</h4>
+              <h4 className="font-bold text-xs text-outline uppercase tracking-wider pl-1">{labels.studentProfile}</h4>
 
               {!isEditing ? (
                 /* View Mode — single trigger row, no duplication */
@@ -109,33 +129,33 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <span className="material-symbols-outlined text-primary text-[18px]">manage_accounts</span>
-                        <p className="text-xs font-bold text-on-surface">Edit Student Profile Details</p>
+                        <p className="text-xs font-bold text-on-surface">{labels.editProfile}</p>
                       </div>
                       <span className="material-symbols-outlined text-outline text-[18px] group-hover:text-primary transition-colors">edit</span>
                     </div>
                     <div className="grid grid-cols-2 gap-4 pt-1 text-[10px] text-on-surface-variant font-semibold">
                       <div className="space-y-1">
-                        <span className="text-[9px] uppercase tracking-wider text-outline block">Full Name</span>
+                        <span className="text-[9px] uppercase tracking-wider text-outline block">{labels.fullName}</span>
                         <span className="text-on-surface font-bold text-xs">{studentName}</span>
                       </div>
                       <div className="space-y-1">
-                        <span className="text-[9px] uppercase tracking-wider text-outline block">Grade / Class</span>
-                        <span className="text-on-surface font-bold text-xs">{studentGrade}</span>
+                        <span className="text-[9px] uppercase tracking-wider text-outline block">{labels.gradeClass}</span>
+                        <span className="text-on-surface font-bold text-xs">{labels.grade.replace("__GRADE__", studentGrade.match(/\d+/)?.[0] ?? studentGrade)}</span>
                       </div>
                       <div className="space-y-1">
-                        <span className="text-[9px] uppercase tracking-wider text-outline block">School</span>
+                        <span className="text-[9px] uppercase tracking-wider text-outline block">{labels.school}</span>
                         <span className="text-on-surface font-bold text-xs truncate block">{studentSchool}</span>
                       </div>
                       <div className="space-y-1">
-                        <span className="text-[9px] uppercase tracking-wider text-outline block">Age</span>
-                        <span className="text-on-surface font-bold text-xs">{studentAge} years old</span>
+                        <span className="text-[9px] uppercase tracking-wider text-outline block">{labels.age}</span>
+                        <span className="text-on-surface font-bold text-xs">{labels.yearsOld.replace("__AGE__", String(studentAge || 0))}</span>
                       </div>
                     </div>
                   </div>
                   {saveSuccess && (
                     <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-bold px-1">
                       <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                      Profile updated successfully!
+                      {labels.profileUpdated}
                     </div>
                   )}
                 </>
@@ -145,14 +165,14 @@ export default function SettingsPage() {
                   <div className="space-y-1.5">
                     <label htmlFor="edit-name" className="text-xs font-bold text-on-surface-variant flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[14px] text-primary">badge</span>
-                      Full Name
+                      {labels.fullName}
                     </label>
                     <input
                       id="edit-name"
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      placeholder="Enter student full name"
+                      placeholder={labels.enterFullName}
                       className="w-full h-11 px-4 bg-slate-50 border border-outline-variant/20 rounded-xl text-sm focus:outline-none focus:border-primary/50 transition-colors"
                       autoFocus
                       required
@@ -162,7 +182,7 @@ export default function SettingsPage() {
                   <div className="space-y-1.5">
                     <label htmlFor="edit-grade" className="text-xs font-bold text-on-surface-variant flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[14px] text-primary">school</span>
-                      Class / Grade
+                      {labels.gradeClass}
                     </label>
                     <select
                       id="edit-grade"
@@ -171,7 +191,7 @@ export default function SettingsPage() {
                       className="w-full h-11 px-4 bg-slate-50 border border-outline-variant/20 rounded-xl text-sm focus:outline-none focus:border-primary/50 transition-colors cursor-pointer"
                     >
                       {GRADE_OPTIONS.map((grade) => (
-                        <option key={grade} value={grade}>{grade}</option>
+                        <option key={grade} value={grade}>{labels.grade.replace("__GRADE__", grade.replace("Grade ", ""))}</option>
                       ))}
                     </select>
                   </div>
@@ -179,14 +199,14 @@ export default function SettingsPage() {
                   <div className="space-y-1.5">
                     <label htmlFor="edit-school" className="text-xs font-bold text-on-surface-variant flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[14px] text-primary">corporate_fare</span>
-                      School Name
+                      {labels.schoolName}
                     </label>
                     <input
                       id="edit-school"
                       type="text"
                       value={editSchool}
                       onChange={(e) => setEditSchool(e.target.value)}
-                      placeholder="Enter school name"
+                      placeholder={labels.enterSchoolName}
                       className="w-full h-11 px-4 bg-slate-50 border border-outline-variant/20 rounded-xl text-sm focus:outline-none focus:border-primary/50 transition-colors"
                       required
                     />
@@ -195,14 +215,14 @@ export default function SettingsPage() {
                   <div className="space-y-1.5">
                     <label htmlFor="edit-age" className="text-xs font-bold text-on-surface-variant flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[14px] text-primary">cake</span>
-                      Age
+                      {labels.age}
                     </label>
                     <input
                       id="edit-age"
                       type="number"
                       value={editAge}
                       onChange={(e) => setEditAge(Number(e.target.value))}
-                      placeholder="Enter age"
+                      placeholder={labels.enterAge}
                       className="w-full h-11 px-4 bg-slate-50 border border-outline-variant/20 rounded-xl text-sm focus:outline-none focus:border-primary/50 transition-colors"
                       required
                     />
@@ -218,12 +238,12 @@ export default function SettingsPage() {
                       {isSaving ? (
                         <>
                           <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
-                          Saving...
+                          {labels.saving}
                         </>
                       ) : (
                         <>
                           <span className="material-symbols-outlined text-[16px]">save</span>
-                          Save Changes
+                          {labels.saveChanges}
                         </>
                       )}
                     </button>
@@ -233,7 +253,7 @@ export default function SettingsPage() {
                       onClick={handleCancel}
                       className="px-4 py-2.5 text-xs font-bold text-on-surface-variant hover:text-on-surface border border-outline-variant/20 rounded-xl hover:bg-slate-50 transition-all cursor-pointer"
                     >
-                      Cancel
+                      {labels.cancel}
                     </button>
                   </div>
                 </form>
@@ -242,12 +262,14 @@ export default function SettingsPage() {
 
             {/* Personalization Settings */}
             <section className="bg-white p-6 rounded-2xl border border-outline-variant/15 shadow-sm space-y-4">
-              <h4 className="font-bold text-xs text-outline uppercase tracking-wider pl-1">Personalization Settings</h4>
+              <h4 className="font-bold text-xs text-outline uppercase tracking-wider pl-1">{labels.personalization}</h4>
+
+              <LanguageSelector variant="settings" />
               
               <div className="space-y-1.5">
                 <label htmlFor="select-persona" className="text-xs font-bold text-on-surface-variant flex items-center gap-1.5 pl-1">
                   <span className="material-symbols-outlined text-[14px] text-primary">psychology</span>
-                  AI Tutor Persona
+                  {labels.tutorPersona}
                 </label>
                 <select
                   id="select-persona"
@@ -258,16 +280,16 @@ export default function SettingsPage() {
                   }}
                   className="w-full h-11 px-4 bg-slate-50 border border-outline-variant/20 rounded-xl text-xs font-semibold focus:outline-none focus:border-primary/50 transition-colors cursor-pointer"
                 >
-                  <option value="Socratic">Maya (Socratic Hints - Recommended)</option>
-                  <option value="Direct">Maya (Direct explanations & answers)</option>
-                  <option value="Friendly">Maya (Playful & encouraging buddy)</option>
+                  <option value="Socratic">{labels.personaSocratic}</option>
+                  <option value="Direct">{labels.personaDirect}</option>
+                  <option value="Friendly">{labels.personaFriendly}</option>
                 </select>
               </div>
             </section>
 
             {/* Help & Privacy */}
             <section className="bg-white p-6 rounded-2xl border border-outline-variant/15 shadow-sm space-y-4">
-              <h4 className="font-bold text-xs text-outline uppercase tracking-wider pl-1">Support & Privacy</h4>
+              <h4 className="font-bold text-xs text-outline uppercase tracking-wider pl-1">{labels.supportPrivacy}</h4>
               
               <div className="space-y-3">
                 <div className="space-y-2">
@@ -280,7 +302,7 @@ export default function SettingsPage() {
                         help
                       </span>
                       <span className={`text-xs font-bold transition-colors ${faqOpen ? "text-primary" : "text-on-surface"}`}>
-                        Help Center & FAQ
+                        {labels.helpFaq}
                       </span>
                     </div>
                     <span className={`material-symbols-outlined text-outline text-[18px] transition-transform duration-200 ${faqOpen ? "rotate-180 text-primary" : ""}`}>
@@ -292,16 +314,13 @@ export default function SettingsPage() {
                     <div className="bg-slate-100/50 border border-outline-variant/10 rounded-xl p-3 space-y-2.5 animate-fade-in select-none">
                       {[
                         {
-                          q: "What can I see on my Dashboard?",
-                          a: "Your dashboard shows your daily progress, active subjects, recommended recovery steps from Maya, and quick study tools to help you resume learning instantly."
+                          q: labels.faqDashboardQuestion, a: labels.faqDashboardAnswer
                         },
                         {
-                          q: "How does the Subjects section work?",
-                          a: "The subjects tab lists all your active courses. Selecting a subject lets you view its full chapter syllabus, attempt entry diagnostics, and track completed topics."
+                          q: labels.faqSubjectsQuestion, a: labels.faqSubjectsAnswer
                         },
                         {
-                          q: "What is the AI Workspace?",
-                          a: "The AI Workspace is your interactive study room. Opening any topic instantly connects you with Maya via real-time Socratic voice to explain concepts, guide you with hints, and test your skills."
+                          q: labels.faqWorkspaceQuestion, a: labels.faqWorkspaceAnswer
                         }
                       ].map((item, idx) => {
                         const isQuestionOpen = activeFaqQuestion === idx;
@@ -347,7 +366,7 @@ export default function SettingsPage() {
                 >
                   <div className="flex items-center gap-3">
                     <span className="material-symbols-outlined text-outline">privacy_tip</span>
-                    <span className="text-xs font-bold text-on-surface">Privacy Policy Agreement</span>
+                    <span className="text-xs font-bold text-on-surface">{labels.privacyPolicy}</span>
                   </div>
                   <span className="material-symbols-outlined text-outline text-[18px]">chevron_right</span>
                 </div>

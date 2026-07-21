@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import { QuestionResult } from "../page";
+import { markPrerequisiteCompleted } from "@/lib/prerequisiteHelper";
 
 interface ResultsPageProps {
   params: Promise<{ chapterId: string }>;
@@ -28,8 +29,17 @@ export default function PrerequisiteResultsPage({ params }: ResultsPageProps) {
     const raw = sessionStorage.getItem(`prereq_results_${chapterId}`);
     if (raw) {
       const data = JSON.parse(raw);
-      setResults(data.results ?? []);
+      const parsedResults: QuestionResult[] = data.results ?? [];
+      setResults(parsedResults);
       setChapterTitle(data.chapterTitle ?? "");
+
+      // If score >= 70%, mark prerequisite as completed in the database
+      const total = parsedResults.length;
+      const correct = parsedResults.filter((r) => r.isCorrect).length;
+      const calcScore = total > 0 ? Math.round((correct / total) * 100) : 0;
+      if (calcScore >= 70) {
+        markPrerequisiteCompleted(chapterId);
+      }
     }
   }, [chapterId]);
 

@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node ws-server.mjs & next dev -H 0.0.0.0",
+    "dev": "next dev -H 0.0.0.0",
+    "dev:all": "node ws-server.mjs & next dev -H 0.0.0.0",
+    "dev:ws": "node ws-server.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@google/genai": "*",

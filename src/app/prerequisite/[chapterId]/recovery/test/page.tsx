@@ -6,6 +6,7 @@ import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import EmptyState from "@/components/layout/EmptyState";
 import { getChapterQuiz, MCQ } from "@/lib/mock/chapterQuizzes";
+import { markPrerequisiteCompleted } from "@/lib/prerequisiteHelper";
 
 interface RecoveryTestPageProps {
   params: Promise<{ chapterId: string }>;
@@ -22,7 +23,6 @@ export default function PrereqRecoveryTestPage({ params }: RecoveryTestPageProps
   const { chapterId } = use(params);
 
   const quizData = getChapterQuiz(chapterId);
-  const allPrereqQuestions = quizData?.prerequisite ?? [];
 
   const [weakTopics, setWeakTopics] = useState<string[]>([]);
   const [questions, setQuestions] = useState<MCQ[]>([]);
@@ -34,14 +34,19 @@ export default function PrereqRecoveryTestPage({ params }: RecoveryTestPageProps
 
   useEffect(() => {
     const raw = sessionStorage.getItem(`prereq_results_${chapterId}`);
-    if (raw) {
+    if (!raw) {
+      setLoading(false);
+      return;
+    }
+
+    async function initRecoveryTest() {
       try {
-        const data = JSON.parse(raw);
-        const results = data.results ?? [];
+        const data = JSON.parse(raw!);
+        const prevResults = data.results ?? [];
 
         // Identify weak topics
         const topicMap: Record<string, { total: number; correct: number }> = {};
-        results.forEach((r: any) => {
+        prevResults.forEach((r: any) => {
           const t = r.question.topic;
           if (!topicMap[t]) topicMap[t] = { total: 0, correct: 0 };
           topicMap[t].total += 1;
@@ -56,18 +61,41 @@ export default function PrereqRecoveryTestPage({ params }: RecoveryTestPageProps
 
         setWeakTopics(weak);
 
-        // Filter diagnostic questions to ONLY include weak topics
-        const weakQuestions = allPrereqQuestions.filter((q) => weak.includes(q.topic));
-        
-        // Shuffle the filtered questions
+        if (weak.length === 0) {
+          setLoading(false);
+          return;
+        }
+
+        // Try fetching dynamically generated questions for the weak topics
+        try {
+          const res = await fetch(`/api/generate-prereq-quiz?chapterId=${chapterId}&weakTopics=${encodeURIComponent(weak.join(","))}`);
+          if (!res.ok) throw new Error("API failed");
+          const apiData = await res.json();
+          if (apiData.questions && apiData.questions.length > 0 && !apiData.fallback) {
+            setQuestions(apiData.questions);
+            setLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.warn("[Recovery Test] Dynamic generation failed, falling back to mock data.", err);
+        }
+
+        // Local mock fallback filtering
+        const localQuizData = getChapterQuiz(chapterId);
+        const localAllPrereqQuestions = localQuizData?.prerequisite ?? [];
+        const weakQuestions = localAllPrereqQuestions.filter((q) => weak.includes(q.topic));
         const shuffled = [...weakQuestions].sort(() => 0.5 - Math.random());
         setQuestions(shuffled);
+
       } catch (e) {
         console.error(e);
+      } finally {
+        setLoading(false);
       }
     }
-    setLoading(false);
-  }, [chapterId, allPrereqQuestions]);
+
+    initRecoveryTest();
+  }, [chapterId]);
 
   const totalQuestions = questions.length;
   const currentQuestion = questions[currentIdx];
@@ -92,6 +120,21 @@ export default function PrereqRecoveryTestPage({ params }: RecoveryTestPageProps
       setSelectedIndex(null);
     } else {
       setResults(newResults);
+      
+      // Update sessionStorage results with this retest's results so the loop can continue
+      sessionStorage.setItem(
+        `prereq_results_${chapterId}`,
+        JSON.stringify({
+          chapterId,
+          chapterTitle: quizData?.chapterTitle || "Recovery Test",
+          results: newResults.map(r => ({
+            question: r.question,
+            selectedIndex: r.selectedIndex,
+            isCorrect: r.isCorrect
+          }))
+        })
+      );
+
       setTestFinished(true);
     }
   };
@@ -100,14 +143,26 @@ export default function PrereqRecoveryTestPage({ params }: RecoveryTestPageProps
     return (
       <PageContainer>
         <Topbar title="Preparing Test..." />
-        <main className="p-8 flex items-center justify-center min-h-[50vh]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <main className="p-8 flex flex-col items-center justify-center min-h-[400px] space-y-6">
+          <div className="relative w-20 h-20 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-ping"></div>
+            <div className="absolute inset-2 rounded-full border-4 border-primary/40 animate-pulse"></div>
+            <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
+              <span className="material-symbols-outlined text-white text-[28px] animate-spin">sync</span>
+            </div>
+          </div>
+          <div className="text-center space-y-2 max-w-sm">
+            <h3 className="font-bold text-lg text-on-surface">Maya is preparing your recovery test...</h3>
+            <p className="text-xs font-semibold text-outline leading-relaxed animate-pulse">
+              Generating new custom diagnostic questions focused on your weak topics.
+            </p>
+          </div>
         </main>
       </PageContainer>
     );
   }
 
-  if (totalQuestions === 0) {
+  if (weakTopics.length === 0) {
     return (
       <PageContainer>
         <Topbar title="Recovery Test" />
@@ -120,12 +175,45 @@ export default function PrereqRecoveryTestPage({ params }: RecoveryTestPageProps
           <button
             onClick={() => {
               sessionStorage.setItem(`prereq_recovery_passed_${chapterId}`, "true");
+              markPrerequisiteCompleted(chapterId);
               router.push(`/chapters/${chapterId}`);
             }}
             className="w-full h-12 bg-primary text-white font-bold rounded-2xl shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95"
           >
             <span>Go to Chapter Roadmap</span>
             <span className="material-symbols-outlined">arrow_forward</span>
+          </button>
+        </main>
+      </PageContainer>
+    );
+  }
+
+  if (totalQuestions === 0) {
+    return (
+      <PageContainer>
+        <Topbar title="Recovery Test" subtitle="Generation Failed" />
+        <main className="p-8 max-w-[900px] mx-auto w-full flex flex-col items-center justify-center min-h-[400px] space-y-6">
+          <div className="w-16 h-16 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center">
+            <span className="material-symbols-outlined text-[32px]">cloud_off</span>
+          </div>
+          <div className="text-center space-y-2 max-w-md">
+            <h3 className="font-bold text-lg text-on-surface">AI Test Generation Failed</h3>
+            <p className="text-xs font-semibold text-outline leading-relaxed">
+              Maya was unable to generate your recovery test because the AI service is busy or rate-limited. Please try again.
+            </p>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-primary text-white font-bold text-sm rounded-xl shadow-md shadow-primary/20 cursor-pointer active:scale-95 transition-all flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-[18px]">refresh</span>
+            <span>Retry Test Generation</span>
+          </button>
+          <button
+            onClick={() => router.back()}
+            className="text-xs font-bold text-outline hover:text-primary cursor-pointer transition-colors"
+          >
+            ← Back to Lessons
           </button>
         </main>
       </PageContainer>
@@ -139,6 +227,7 @@ export default function PrereqRecoveryTestPage({ params }: RecoveryTestPageProps
 
     if (passed) {
       sessionStorage.setItem(`prereq_recovery_passed_${chapterId}`, "true");
+      markPrerequisiteCompleted(chapterId);
     }
 
     return (

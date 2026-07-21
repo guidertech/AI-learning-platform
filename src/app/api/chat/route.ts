@@ -1,4 +1,17 @@
 import { NextResponse } from "next/server";
+import { buildTutorSystemPrompt } from "@/lib/buildTutorSystemPrompt";
+
+type ConversationMessage = {sender: "USER" | "AI"; text: string};
+type ChatRequest = {
+  message?: unknown;
+  preferredLanguage?: unknown;
+  grade?: unknown;
+  subject?: unknown;
+  chapter?: unknown;
+  topic?: unknown;
+  conversationHistory?: unknown;
+  history?: unknown;
+};
 
 // Fallback rule-based Socratic responses if no API key is specified
 // Fallback rule-based Socratic responses if no API key is specified
@@ -43,41 +56,52 @@ const getLocalSocraticReply = (message: string, topicName?: string, subjectName?
 
 export async function POST(req: Request) {
   try {
-    const { message, history, subject, topic, persona } = await req.json();
+    const body = await req.json() as ChatRequest;
+    const {
+      message,
+      preferredLanguage,
+      grade,
+      subject,
+      chapter,
+      topic,
+      conversationHistory,
+      history
+    } = body;
+
+    if (typeof message !== "string" || !message.trim() || message.length > 10_000) {
+      return NextResponse.json({error: "invalid_message"}, {status: 400});
+    }
+
+    const cleanString = (value: unknown) => typeof value === "string" ? value.slice(0, 500) : undefined;
+    const responseLanguage = preferredLanguage === "hi" ? "hi" : "en";
+    const rawHistory = conversationHistory ?? history;
+    const activeHistory: ConversationMessage[] = Array.isArray(rawHistory)
+      ? rawHistory.filter((item: unknown): item is ConversationMessage => {
+          if (!item || typeof item !== "object") return false;
+          const candidate = item as Partial<ConversationMessage>;
+          return (candidate.sender === "USER" || candidate.sender === "AI") && typeof candidate.text === "string";
+        }).slice(-12)
+      : [];
+
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey || apiKey === "placeholder" || apiKey === "") {
-      // Fallback response
-      const fallbackText = getLocalSocraticReply(message, topic, subject);
+      // Fallback Socratic reply
+      const fallbackText = getLocalSocraticReply(message, cleanString(topic), cleanString(subject));
       return NextResponse.json({ text: fallbackText });
     }
 
-    let coreInstructions = "";
-    if (persona === "Direct") {
-      coreInstructions = `1. Speak strictly in clean, friendly Hindi using the Devanagari script. You can use common technical terms in English, but the overall language and script of the response must be Devanagari Hindi.
-2. Explain concepts directly, give step-by-step solutions, and provide direct answers when the student asks for help.
-3. Keep your replies brief, clear, and easy to read (max 2-3 sentences).`;
-    } else if (persona === "Friendly") {
-      coreInstructions = `1. Speak strictly in clean, friendly Hindi using the Devanagari script. You can use common technical terms in English, but the overall language and script of the response must be Devanagari Hindi.
-2. Use very simple words, fun analogies (like cartoon characters, pizza, or games), and highly motivating praise.
-3. Be gentle, warm, and encourage the student at every step. Keep your replies brief (max 2-3 sentences).`;
-    } else {
-      // Socratic (default)
-      coreInstructions = `1. Speak strictly in clean, friendly Hindi using the Devanagari script (e.g. "चलिए, fractions को समझते हैं...", "क्या आप तैयार हैं?"). You can use common technical terms (like fractions, numerator, science, maths, history) in English, but the overall language and script of the response must be Devanagari Hindi.
-2. Teach the topic step-by-step. In each response, explain one small sub-concept of the topic clearly in Devanagari Hindi, and then immediately ask a simple question in Hindi to test the student's understanding before moving on.
-3. NEVER give the direct answer to any problem or academic question. Instead, guide the student step-by-step by asking scaffolding questions and giving encouraging feedback in Hindi.
-4. Keep your replies brief, highly conversational, and engaging.`;
-    }
+    const systemPrompt = `${buildTutorSystemPrompt({
+      preferredLanguage: responseLanguage,
+      grade: cleanString(grade) || "5",
+      subject: cleanString(subject),
+      topic: cleanString(topic)
+    })}
 
-    const systemPrompt = `You are Maya, an encouraging, friendly 3D AI Tutor on the ClassOrbit platform.
-You are helping Grade 5 students learn ${subject || "Mathematics"}, specifically the topic "${topic || "Fractions"}".
-You are currently teaching in the style of the "${persona || "Socratic"}" persona.
-
-CRITICAL GUIDELINES FOR YOUR RESPONSES:
-${coreInstructions}
+${chapter ? `Active Chapter Context: ${cleanString(chapter)}` : ""}
 
 Conversation history:
-${history.map((h: any) => `${h.sender === "USER" ? "Student" : "Maya"}: ${h.text}`).join("\n")}
+${activeHistory.map((h) => `${h.sender === "USER" ? "Student" : "Maya"}: ${h.text.slice(0, 2_000)}`).join("\n")}
 `;
 
     const response = await fetch(
@@ -98,11 +122,11 @@ ${history.map((h: any) => `${h.sender === "USER" ? "Student" : "Maya"}: ${h.text
 
     if (!response.ok) {
       console.warn("Gemini API returned an error, falling back to Socratic engine:", response.statusText);
-      return NextResponse.json({ text: getLocalSocraticReply(message, topic, subject) });
+      return NextResponse.json({ text: getLocalSocraticReply(message, cleanString(topic), cleanString(subject)) });
     }
 
     const data = await response.json();
-    const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || getLocalSocraticReply(message, topic, subject);
+    const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || getLocalSocraticReply(message, cleanString(topic), cleanString(subject));
     
     return NextResponse.json({ text: replyText });
   } catch (error) {

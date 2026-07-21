@@ -24,6 +24,7 @@ export interface Chapter {
   description: string;
   topics: Topic[];
   hasPrerequisite?: boolean;
+  chapter_notes?: string | null;
 }
 
 export interface Subject {

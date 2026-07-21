@@ -23,6 +23,9 @@ export default function PrereqRecoveryPage({ params }: PrereqRecoveryPageProps) 
   const [chapterTitle, setChapterTitle] = useState("");
   const [loading, setLoading] = useState(true);
 
+  const [lessonData, setLessonData] = useState<any>(null);
+  const [lessonLoading, setLessonLoading] = useState(false);
+
   useEffect(() => {
     const raw = sessionStorage.getItem(`prereq_results_${chapterId}`);
     if (raw) {
@@ -55,14 +58,48 @@ export default function PrereqRecoveryPage({ params }: PrereqRecoveryPageProps) 
   }, [chapterId]);
 
   const currentTopic = weakTopics[currentIdx];
-  const lessonData = currentTopic ? prereqLessons[currentTopic] : null;
 
-  // Initialize Maya Chat when current topic changes
+  // Fetch or retrieve lesson explanation
+  useEffect(() => {
+    if (!currentTopic) return;
+
+    if (prereqLessons[currentTopic]) {
+      setLessonData(prereqLessons[currentTopic]);
+      return;
+    }
+
+    // Generate dynamic lesson from API
+    async function loadDynamicLesson() {
+      setLessonLoading(true);
+      try {
+        const res = await fetch(`/api/generate-prereq-lesson?topic=${encodeURIComponent(currentTopic)}&chapterId=${chapterId}`);
+        if (!res.ok) throw new Error("Failed to load lesson");
+        const data = await res.json();
+        setLessonData(data);
+      } catch (err) {
+        console.error(err);
+        setLessonData({
+          topic: currentTopic,
+          title: `${currentTopic} की बुनियादी बातें`,
+          explanation: `इस विषय में हम ${currentTopic} के मूल सिद्धांतों को सीखेंगे ताकि हम मुख्य अध्याय को समझ सकें।`,
+          example: `${currentTopic} का एक सामान्य उदाहरण।`,
+          imageSrc: "https://images.unsplash.com/photo-1596495578065-6e076b888b83?w=800&auto=format&fit=crop&q=60"
+        });
+      } finally {
+        setLessonLoading(false);
+      }
+    }
+
+    loadDynamicLesson();
+  }, [currentTopic, chapterId]);
+
+  // Initialize Maya Chat when current topic or lessonData changes
   useEffect(() => {
     if (currentTopic && lessonData) {
+      const promptText = `नमस्ते! मैंने देखा कि आपको '${currentTopic}' विषय में थोड़ी कठिनाई हो रही थी। आइए इसे मिलकर समझते हैं। आप मुझसे इस बारे में कोई भी सवाल पूछ सकते हैं!`;
       initializeChatForTopic(
         `Prerequisite Support: ${currentTopic}`,
-        `Hi! I noticed you struggled with "${currentTopic}" in the prerequisite test. Let's study this concept together so we can unlock the main chapter. Ask me any questions!`
+        promptText
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -137,7 +174,20 @@ export default function PrereqRecoveryPage({ params }: PrereqRecoveryPageProps) 
             </div>
 
             {/* Lesson Card */}
-            {lessonData ? (
+            {lessonLoading ? (
+              <section className="bg-white rounded-[28px] p-8 border border-outline-variant/15 shadow-sm flex flex-col items-center justify-center space-y-4 min-h-[300px]">
+                <div className="relative w-12 h-12 flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-ping"></div>
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white">
+                    <span className="material-symbols-outlined text-[18px] animate-spin">sync</span>
+                  </div>
+                </div>
+                <div className="text-center space-y-1">
+                  <p className="text-sm font-bold text-on-surface">Maya is preparing your support lesson...</p>
+                  <p className="text-xs font-semibold text-outline">Generating custom explanation and solved examples in Hindi for &quot;{currentTopic}&quot;.</p>
+                </div>
+              </section>
+            ) : lessonData ? (
               <section className="bg-white rounded-[28px] p-6 border border-outline-variant/15 shadow-sm space-y-5">
                 <div className="flex justify-between items-start">
                   <div>
@@ -157,14 +207,16 @@ export default function PrereqRecoveryPage({ params }: PrereqRecoveryPageProps) 
                 </div>
 
                 <div className="space-y-4">
-                  <p className="text-xs text-on-surface-variant leading-relaxed">
+                  <p className="text-xs text-on-surface-variant leading-relaxed whitespace-pre-line">
                     {lessonData.explanation}
                   </p>
 
-                  <div className="bg-slate-50 border border-outline-variant/20 p-4 rounded-xl space-y-1.5">
-                    <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">Solved Example</span>
-                    <p className="text-xs text-on-surface-variant font-medium leading-relaxed">{lessonData.example}</p>
-                  </div>
+                  {lessonData.example && (
+                    <div className="bg-slate-50 border border-outline-variant/20 p-4 rounded-xl space-y-1.5">
+                      <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">Solved Example</span>
+                      <p className="text-xs text-on-surface-variant font-medium leading-relaxed whitespace-pre-line">{lessonData.example}</p>
+                    </div>
+                  )}
                 </div>
               </section>
             ) : (
@@ -176,7 +228,10 @@ export default function PrereqRecoveryPage({ params }: PrereqRecoveryPageProps) 
             {/* Action button */}
             <button
               onClick={handleNext}
-              className="w-full h-12 bg-primary text-white font-bold rounded-2xl shadow-md shadow-primary/20 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] hover:opacity-95 transition-all"
+              disabled={lessonLoading}
+              className={`w-full h-12 bg-primary text-white font-bold rounded-2xl shadow-md shadow-primary/20 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] hover:opacity-95 transition-all ${
+                lessonLoading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
             >
               <span>{currentIdx + 1 < weakTopics.length ? "Next Weak Topic" : "Start Recovery Test"}</span>
               <span className="material-symbols-outlined text-[18px]">arrow_forward</span>

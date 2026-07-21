@@ -2,29 +2,38 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { mockChapters } from "@/lib/mock/chapters";
+import {createClient} from "@/lib/supabase/client";
+import {getLastLearning} from "@/lib/lastLearning";
+
 
 export default function LearningBasePage() {
   const router = useRouter();
 
   useEffect(() => {
-    // 1. Check if there is a last studied topic saved in local or session storage
-    const lastTopic = sessionStorage.getItem("last_studied_topic") || localStorage.getItem("last_studied_topic");
-    if (lastTopic) {
-      router.replace(`/learning/${lastTopic}`);
-      return;
-    }
+    let cancelled = false;
+    void (async () => {
+      const supabase = createClient();
+      const {data: {user}} = await supabase.auth.getUser();
+      if (!user || cancelled) {
+        router.replace("/subjects");
+        return;
+      }
 
-    // 2. Default: take them to the first topic of the first Mathematics chapter (Place Values)
-    const firstChapter = mockChapters["sub-math"]?.[0];
-    const firstTopic = firstChapter?.topics?.[0];
-    if (firstTopic) {
-      router.replace(`/learning/${firstTopic.slug}`);
-      return;
-    }
+      try {
+        const lastLearning = await getLastLearning(supabase, user.id);
+        if (!cancelled && lastLearning) {
+          router.replace(`/learning/${lastLearning.topic_id}`);
+          return;
+        }
+      } catch (error) {
+        console.error("Could not load last learning topic:", error);
+      }
 
-    // 3. Fallback to subjects selector if no data is found
-    router.replace("/subjects");
+      if (!cancelled) router.replace("/subjects");
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   return (

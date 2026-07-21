@@ -5,9 +5,8 @@ import { useRouter } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import EmptyState from "@/components/layout/EmptyState";
-import { mockChapters } from "@/lib/mock/chapters";
-import { mockSubjects } from "@/lib/mock/subjects";
 import { useLearning } from "@/context/LearningContext";
+import { createClient } from "@/lib/supabase/client";
 import { getChapterQuiz } from "@/lib/mock/chapterQuizzes";
 
 interface ChapterDetailPageProps {
@@ -22,34 +21,61 @@ export default function ChapterDetailPage({ params }: ChapterDetailPageProps) {
   const [checkingPrereq, setCheckingPrereq] = useState(true);
   const [prereqScore, setPrereqScore] = useState<number | null>(null);
 
-  // Search for the chapter across all subjects
-  let foundChapter: any = null;
-  let subjectId = "";
-
-  for (const subId in mockChapters) {
-    const ch = mockChapters[subId].find((c) => c.id === chapterId);
-    if (ch) {
-      foundChapter = ch;
-      subjectId = subId;
-      break;
-    }
-  }
+  const [foundChapter, setFoundChapter] = useState<any>(null);
+  const [subjectId, setSubjectId] = useState<string>("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (foundChapter) {
-      setActiveChapter(foundChapter.title);
-      const subject = mockSubjects.find((s) => s.id === subjectId);
-      if (subject) {
-        setActiveSubject(subject.name);
+    async function loadChapter() {
+      const supabase = createClient();
+      try {
+        const { data: dbChapter } = await supabase
+          .from("chapters")
+          .select("*, subjects(name)")
+          .eq("id", chapterId)
+          .maybeSingle();
+
+        if (dbChapter) {
+          const { data: dbTopics } = await supabase
+            .from("topics")
+            .select("*")
+            .eq("chapter_id", dbChapter.chapter_id)
+            .order("order_index", { ascending: true });
+
+          const chTopics = (dbTopics || []).map((t: any) => ({
+            ...t,
+            title: t.topic_name,
+            slug: t.topic_id?.toString()
+          }));
+          const mapped = {
+            id: dbChapter.id,
+            title: dbChapter.name,
+            description: dbChapter.description,
+            hasPrerequisite: dbChapter.requires_prerequisite,
+            prerequisiteCompleted: dbChapter.prerequisite_completed,
+            topics: chTopics
+          };
+          setFoundChapter(mapped);
+          setSubjectId(dbChapter.subject_id);
+          
+          setActiveChapter(mapped.title);
+          if (dbChapter.subjects?.name) {
+            setActiveSubject(dbChapter.subjects.name);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading chapter:", error);
+      } finally {
+        setLoading(false);
       }
     }
-  }, [foundChapter, subjectId, setActiveChapter, setActiveSubject]);
+    void loadChapter();
+  }, [chapterId, setActiveChapter, setActiveSubject]);
 
   useEffect(() => {
     if (!foundChapter) return;
 
-    const quizData = getChapterQuiz(chapterId);
-    if (!foundChapter.hasPrerequisite || !quizData || !quizData.prerequisite || quizData.prerequisite.length === 0) {
+    if (!foundChapter.hasPrerequisite || foundChapter.prerequisiteCompleted) {
       setCheckingPrereq(false);
       return;
     }
@@ -101,6 +127,17 @@ export default function ChapterDetailPage({ params }: ChapterDetailPageProps) {
     }
   }, [chapterId]);
 
+  if (loading) {
+    return (
+      <PageContainer>
+        <Topbar title="Loading..." subtitle="Fetching chapter details" />
+        <main className="p-8 flex items-center justify-center min-h-[50vh]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </main>
+      </PageContainer>
+    );
+  }
+
   if (!foundChapter) {
     return (
       <PageContainer>
@@ -137,7 +174,7 @@ export default function ChapterDetailPage({ params }: ChapterDetailPageProps) {
       <main className="p-8 max-w-[1200px] mx-auto w-full space-y-6">
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => router.push(`/subjects/${subjectId}/chapters`)}
+            onClick={() => router.back()}
             className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors active:scale-95 cursor-pointer"
           >
             <span className="material-symbols-outlined text-primary">arrow_back</span>

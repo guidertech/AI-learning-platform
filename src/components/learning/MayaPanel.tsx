@@ -9,6 +9,9 @@ import React, {
 import { useLearning } from "@/context/LearningContext";
 import AITeacherCard from "@/components/learning/AITeacherCard";
 import AskMayaInput from "@/components/learning/AskMayaInput";
+import AISpeechText from "@/components/learning/AISpeechText";
+import {useAISpeechLanguage} from "@/hooks/useAISpeechLanguage";
+import {translateForSpeech} from "@/lib/translation/translateForSpeech";
 
 const TypingIndicator = () => (
   <div className="flex items-center gap-1.5 py-2">
@@ -88,7 +91,8 @@ interface MayaPanelProps {
 }
 
 export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
-  const { studentName, studentGrade, activeChapter, activeTopic, chatMessages, addChatMessage, setIsAISpeaking, activeAITranscription, setActiveAITranscription } = useLearning();
+  const { studentName, studentGrade, activeSubject, activeChapter, activeTopic, chatMessages, addChatMessage, setIsAISpeaking, activeAITranscription, setActiveAITranscription } = useLearning();
+  const {language: aiSpeechLanguage} = useAISpeechLanguage();
   const firstName = studentName && studentName !== "Maya" ? studentName.split(" ")[0] : "Vishal";
 
   // Panel open/close and modes states
@@ -191,7 +195,7 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
     };
   }, []);
 
-  // Trigger auto-start voice call when activeTopic changes and autoStartVoice is enabled
+  // Restart the live session when the topic or selected AI language changes.
   useEffect(() => {
     if (autoStartVoice && activeTopic) {
       // First, stop any existing connection if it exists to clean up
@@ -210,7 +214,7 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
         clearTimeout(timer);
       };
     }
-  }, [activeTopic, autoStartVoice]);
+  }, [activeTopic, aiSpeechLanguage, autoStartVoice]);
 
 
   // Smooth typewriter streaming transcription effect
@@ -301,7 +305,8 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
       // setIsVoiceActive(true); // will be set after successful init
 
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.hostname}:3002?name=${encodeURIComponent(studentName)}&grade=${encodeURIComponent(studentGrade)}&topic=${encodeURIComponent(activeTopic)}&chapter=${encodeURIComponent(activeChapter)}`;
+      const voiceLocale = aiSpeechLanguage === "hi" ? "hi-IN" : "en-IN";
+      const wsUrl = `${protocol}//${window.location.hostname}:3002?name=${encodeURIComponent(studentName)}&grade=${encodeURIComponent(studentGrade)}&topic=${encodeURIComponent(activeTopic)}&chapter=${encodeURIComponent(activeChapter)}&locale=${voiceLocale}`;
 
       ws.current = new WebSocket(wsUrl);
 
@@ -666,17 +671,17 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
                 {activeUserTranscription && (
                   <div className="text-left">
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">You said</p>
-                    <p className="text-sm text-slate-200 leading-relaxed italic">"{activeUserTranscription}"</p>
+                    <p data-no-translate className="text-sm text-slate-200 leading-relaxed italic">"{activeUserTranscription}"</p>
                   </div>
                 )}
                 {activeAITranscription && (
                   <div className="text-left border-t border-white/5 pt-3">
                     <p className="text-[10px] text-primary font-bold uppercase tracking-wider mb-1">Maya</p>
-                    <div className="text-sm text-slate-100 leading-relaxed font-medium">
+                    <div data-no-translate className="text-sm text-slate-100 leading-relaxed font-medium">
                       {activeAITranscription === "thinking..." ? (
                         <TypingIndicator />
                       ) : (
-                        displayedAIText
+                        <AISpeechText text={displayedAIText} />
                       )}
                     </div>
                   </div>
@@ -723,15 +728,17 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
                         : "bg-primary text-white border-transparent rounded-tr-none"
                     }`}>
                       <div className="flex items-start justify-between gap-2">
-                        <span>{msg.text}</span>
+                        {isAI ? <AISpeechText text={msg.text} /> : <span data-no-translate>{msg.text}</span>}
                         {isAI && (
                           <button
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.stopPropagation();
                               if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
                               window.speechSynthesis.cancel();
                               const cleanText = msg.text.replace(/[*_#`~]/g, "").replace(/https?:\/\/\S+/g, "");
-                              const utterance = new SpeechSynthesisUtterance(cleanText);
+                              const spokenText = await translateForSpeech(cleanText, aiSpeechLanguage);
+                              const utterance = new SpeechSynthesisUtterance(spokenText);
+                              utterance.lang = aiSpeechLanguage === "hi" ? "hi-IN" : "en-IN";
                               utterance.rate = 0.95;
                               window.speechSynthesis.speak(utterance);
                             }}
@@ -901,17 +908,17 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
                 {activeUserTranscription && (
                   <div className="text-left">
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">You said</p>
-                    <p className="text-xs text-slate-200 leading-relaxed italic">"{activeUserTranscription}"</p>
+                    <p data-no-translate className="text-xs text-slate-200 leading-relaxed italic">"{activeUserTranscription}"</p>
                   </div>
                 )}
                 {activeAITranscription && (
                   <div className="text-left border-t border-white/5 pt-2">
                     <p className="text-[10px] text-primary font-bold uppercase tracking-wider mb-0.5">Maya</p>
-                    <div className="text-xs text-slate-100 leading-relaxed font-medium">
+                    <div data-no-translate className="text-xs text-slate-100 leading-relaxed font-medium">
                       {activeAITranscription === "thinking..." ? (
                         <TypingIndicator />
                       ) : (
-                        displayedAIText
+                        <AISpeechText text={displayedAIText} />
                       )}
                     </div>
                   </div>
@@ -951,12 +958,12 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
                     }`}>
                       <span className="material-symbols-outlined text-[14px]">{isAI ? "psychology" : "person"}</span>
                     </div>
-                    <div className={`p-3 rounded-2xl border text-xs max-w-[82%] leading-relaxed ${
+                    <div data-no-translate className={`p-3 rounded-2xl border text-xs max-w-[82%] leading-relaxed ${
                       isAI
                         ? "bg-slate-50 border-outline-variant/10 rounded-tl-none text-on-surface"
                         : "bg-primary text-white border-transparent rounded-tr-none"
                     }`}>
-                      {msg.text}
+                      {isAI ? <AISpeechText text={msg.text} /> : msg.text}
                     </div>
                   </div>
                 );
@@ -1008,4 +1015,3 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
     </>
   );
 }
-

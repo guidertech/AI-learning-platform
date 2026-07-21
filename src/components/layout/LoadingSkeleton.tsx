@@ -3,7 +3,7 @@
 import React from "react";
 
 interface LoadingSkeletonProps {
-  type?: "dashboard" | "subjects" | "workspace";
+  type?: "dashboard" | "subjects" | "workspace" | "chapters";
 }
 
 export default function LoadingSkeleton({ type = "dashboard" }: LoadingSkeletonProps) {
@@ -29,6 +29,16 @@ export default function LoadingSkeleton({ type = "dashboard" }: LoadingSkeletonP
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse p-6">
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="h-36 bg-slate-200 rounded-[28px]"></div>
+        ))}
+      </div>
+    );
+  }
+
+  if (type === "chapters") {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-pulse w-full p-6">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-40 bg-slate-200 rounded-[28px]"></div>
         ))}
       </div>
     );

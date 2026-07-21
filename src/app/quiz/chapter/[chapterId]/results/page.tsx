@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import { QuestionResult } from "../page";
+import { saveQuizAttempt } from "@/lib/quizAttemptsHelper";
+import { createClient } from "@/lib/supabase/client";
 
 interface ChapterEndResultsPageProps {
   params: Promise<{ chapterId: string }>;
@@ -23,13 +25,68 @@ export default function ChapterEndResultsPage({ params }: ChapterEndResultsPageP
   const [results, setResults] = useState<QuestionResult[]>([]);
   const [chapterTitle, setChapterTitle] = useState("");
   const [activeTab, setActiveTab] = useState<"questions" | "topics">("topics");
+  const [dbStatus, setDbStatus] = useState<{ status: 'saving' | 'saved' | 'failed' | null; message?: string }>({ status: null });
 
   useEffect(() => {
     const raw = sessionStorage.getItem(`chapter_end_results_${chapterId}`);
     if (raw) {
       const data = JSON.parse(raw);
-      setResults(data.results ?? []);
+      const parsedResults: QuestionResult[] = data.results ?? [];
+      setResults(parsedResults);
       setChapterTitle(data.chapterTitle ?? "");
+
+      // Record the attempt in the database if not already saved to prevent duplicates on refresh
+      if (!data.savedToDb) {
+        setDbStatus({ status: 'saving' });
+        const total = parsedResults.length;
+        const correct = parsedResults.filter((r) => r.isCorrect).length;
+
+        async function performSave() {
+          try {
+            let code = data.chapterCode ? Number(data.chapterCode) : null;
+            
+            // Fallback: If chapterCode is not in sessionStorage, fetch it from chapters table in DB
+            if (!code || isNaN(code)) {
+              console.log("[ChapterEndResults] ChapterCode not found in session storage. Fetching from database...");
+              const supabase = createClient();
+              const { data: dbChapter, error: chapterError } = await supabase
+                .from("chapters")
+                .select("chapter_id")
+                .eq("id", chapterId)
+                .maybeSingle();
+
+              if (chapterError) {
+                throw chapterError;
+              }
+              if (dbChapter?.chapter_id) {
+                code = Number(dbChapter.chapter_id);
+              }
+            }
+
+            if (!code || isNaN(code)) {
+              throw new Error("Could not resolve database chapter_id integer code");
+            }
+
+            const res = await saveQuizAttempt(code, total, correct);
+            if (res.success) {
+              console.log("[ChapterEndResults] Successfully recorded attempt in database.");
+              data.savedToDb = true;
+              sessionStorage.setItem(`chapter_end_results_${chapterId}`, JSON.stringify(data));
+              setDbStatus({ status: 'saved' });
+            } else {
+              console.warn("[ChapterEndResults] Failed to record attempt in database:", res.error);
+              setDbStatus({ status: 'failed', message: res.error });
+            }
+          } catch (err: any) {
+            console.warn("[ChapterEndResults] Error invoking saveQuizAttempt:", err);
+            setDbStatus({ status: 'failed', message: err.message || String(err) });
+          }
+        }
+
+        void performSave();
+      } else {
+        setDbStatus({ status: 'saved' });
+      }
     }
   }, [chapterId]);
 
@@ -59,6 +116,25 @@ export default function ChapterEndResultsPage({ params }: ChapterEndResultsPageP
       <Topbar title="Chapter Test Results" subtitle={chapterTitle} />
 
       <main className="p-4 md:p-8 max-w-[960px] mx-auto w-full space-y-6">
+
+        {/* Database Sync Status */}
+        {dbStatus.status === 'saving' && (
+          <div className="bg-blue-50 border border-blue-100 text-blue-700 px-4 py-3 rounded-2xl flex items-center gap-3 text-xs font-semibold shadow-sm animate-pulse">
+            <span className="animate-spin material-symbols-outlined text-[18px]">sync</span>
+            <span>saving attempt to database...</span>
+          </div>
+        )}
+        {dbStatus.status === 'failed' && (
+          <div className="bg-red-50 border border-red-100 text-red-700 px-4 py-3 rounded-2xl flex flex-col gap-1.5 text-xs font-semibold shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px] text-red-600">error</span>
+              <span>Could not save results to database: {dbStatus.message}</span>
+            </div>
+            <p className="text-[10px] text-red-600 font-medium pl-6">
+              Please check your Supabase Row Level Security (RLS) policies, foreign key constraints, or authentication context.
+            </p>
+          </div>
+        )}
 
         {/* Score Card Hero */}
         <section className="bg-white rounded-[28px] border border-outline-variant/15 shadow-sm p-6 flex flex-col sm:flex-row items-center gap-6">

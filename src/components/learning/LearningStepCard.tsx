@@ -2,6 +2,8 @@
 
 import React, { useRef, useEffect } from "react";
 import { useLearning } from "@/context/LearningContext";
+import AISpeechLanguageSelector from "@/components/learning/AISpeechLanguageSelector";
+import AISpeechText from "@/components/learning/AISpeechText";
 
 interface LearningStepCardProps {
   stepNumber: number;
@@ -51,7 +53,10 @@ export default function LearningStepCard({
           <span className="inline-flex px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-primary/10 text-primary uppercase">📖 Topic Lesson</span>
           <h2 className="font-bold text-base text-on-surface mt-1">{title}</h2>
         </div>
-        <span className="text-[10px] text-outline font-semibold">{durationText}</span>
+        <div className="flex items-center gap-2">
+          <AISpeechLanguageSelector />
+          <span className="text-[10px] text-outline font-semibold">{durationText}</span>
+        </div>
       </div>
       
       <div className="aspect-video rounded-xl bg-surface-container overflow-hidden relative border border-outline-variant/10 select-none flex items-center justify-center">
@@ -86,7 +91,7 @@ export default function LearningStepCard({
             <p className={`text-xs leading-relaxed ${
               showLiveText ? "text-primary font-bold" : "text-on-surface-variant"
             }`}>
-              {displayedText}
+              <AISpeechText text={displayedText} />
             </p>
           </div>
         </div>

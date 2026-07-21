@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import {usePathname} from "next/navigation";
 import { useLearning } from "@/context/LearningContext";
 
 export default function AppSidebar() {
@@ -10,15 +10,17 @@ export default function AppSidebar() {
   const { studentName, studentGrade } = useLearning();
 
   const navItems = [
-    { name: "Dashboard", href: "/dashboard", icon: "dashboard" },
-    { name: "Subjects", href: "/subjects", icon: "import_contacts" },
-    { name: "AI Workspace", href: "/learning", icon: "psychology" },
-    { name: "Report", href: "/progress", icon: "bar_chart" },
-    { name: "Settings", href: "/settings", icon: "settings" }
+    { key: "dashboard", name: "Dashboard", href: "/dashboard", icon: "dashboard" },
+    { key: "subjects", name: "Subjects", href: "/subjects", icon: "import_contacts" },
+    { key: "aiWorkspace", name: "AI Workspace", href: "/learning", icon: "psychology" },
+    { key: "aiHomework", name: "AI Homework", href: "/homework", icon: "assignment" },
+    { key: "progressTracker", name: "Progress Tracker", href: "/progress", icon: "trending_up" },
+    { key: "report", name: "Report", href: "/reports", icon: "bar_chart" },
+    { key: "settings", name: "Settings", href: "/settings", icon: "settings" }
   ];
 
   return (
-    <aside className="w-[260px] h-screen sticky top-0 left-0 bg-white border-r border-outline-variant/30 flex flex-col justify-between p-6 shrink-0 z-30 shadow-[4px_0_24px_rgba(83,65,205,0.02)]">
+    <aside className="w-[260px] h-screen sticky top-0 inset-inline-start-0 bg-white border-e border-outline-variant/30 flex flex-col justify-between p-6 shrink-0 z-30 shadow-[4px_0_24px_rgba(83,65,205,0.02)]">
       <div className="space-y-8">
         {/* Brand Logo */}
         <div className="flex items-center gap-3">
