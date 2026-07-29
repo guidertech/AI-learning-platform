@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import { QuestionResult } from "../page";
-import { saveQuizAttempt } from "@/lib/quizAttemptsHelper";
+import { saveQuizAttempt } from "@/features/curriculum";
 import { createClient } from "@/lib/supabase/client";
 
 interface ChapterEndResultsPageProps {

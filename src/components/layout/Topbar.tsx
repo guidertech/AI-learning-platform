@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-import {useRouter} from "next/navigation";
-import LanguageSelector from "@/components/translation/LanguageSelector";
+import { useRouter } from "next/navigation";
+import { LanguageSelector } from "@/features/language";
+import { useLearning } from "@/context/LearningContext";
 
 interface TopbarProps {
   title: React.ReactNode;
@@ -13,12 +14,13 @@ interface TopbarProps {
 
 export default function Topbar({ title, subtitle, showBack = false }: TopbarProps) {
   const router = useRouter();
+  const { studentName } = useLearning();
 
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md flex justify-between items-center w-full px-4 md:px-8 h-16 md:h-20 border-b border-outline-variant/10 select-none">
       <div className="flex min-w-0 items-center gap-4">
         {showBack && (
-          <button 
+          <button
             onClick={() => router.back()}
             className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
           >
@@ -33,14 +35,14 @@ export default function Topbar({ title, subtitle, showBack = false }: TopbarProp
 
       <div className="flex shrink-0 items-center gap-2 md:gap-3">
         <LanguageSelector />
-        <button 
+        <button
           onClick={() => router.push("/settings")}
           aria-label="Open settings"
           className="p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
         >
           <span className="material-symbols-outlined">settings</span>
         </button>
-        <div 
+        <div
           onClick={() => router.push("/settings")}
           role="button"
           tabIndex={0}
@@ -48,15 +50,12 @@ export default function Topbar({ title, subtitle, showBack = false }: TopbarProp
             if (event.key === "Enter" || event.key === " ") router.push("/settings");
           }}
           aria-label="Open student profile"
-          className="w-9 h-9 rounded-full overflow-hidden border border-outline-variant/20 bg-primary-fixed shrink-0 cursor-pointer hover:border-primary transition-all"
+          className="w-9 h-9 rounded-full border border-primary/20 bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0 cursor-pointer hover:border-primary hover:bg-primary/20 transition-all"
         >
-          <img 
-            className="w-full h-full object-cover" 
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuApJDxIvWyGdrw51oyBB7RoTwh3PN4ISeya5QHaa9Yx-1aMOlNdkvGjAqFuSNvVzcrmDETaKcU0E3efBD_adDGHcP4wweTOyOOk-TDNrX32UQCohTlRWen2r5dyS9VJtLI3xRL4sQ2iEmn3_ESbUbNiPch_Hmnk1WhAHwpdzHDy6sWFqUJkN8yYWARdlgMTKrWBTgjpRTZIa06b8LyV3JKfRSW5suMJzOxNvq2aGVDZdAhrela35LSOJCdVobsBjblSX8Rt8J9WujA"
-            alt="Student Avatar"
-          />
+          {studentName ? studentName.charAt(0).toUpperCase() : <span className="material-symbols-outlined text-[18px]">person</span>}
         </div>
       </div>
     </header>
   );
 }
+

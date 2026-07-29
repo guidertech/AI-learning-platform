@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import EmptyState from "@/components/layout/EmptyState";
-import { prereqLessons } from "@/lib/mock/prereqLessons";
-import MayaPanel from "@/components/learning/MayaPanel";
+import { prereqLessons } from "@/features/curriculum/data/prereqLessons";
+import { MayaPanel } from "@/features/maya";
 import { useLearning } from "@/context/LearningContext";
 
 interface PrereqRecoveryPageProps {

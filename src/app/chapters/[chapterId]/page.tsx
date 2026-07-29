@@ -7,7 +7,7 @@ import Topbar from "@/components/layout/Topbar";
 import EmptyState from "@/components/layout/EmptyState";
 import { useLearning } from "@/context/LearningContext";
 import { createClient } from "@/lib/supabase/client";
-import { getChapterQuiz } from "@/lib/mock/chapterQuizzes";
+import { getChapterQuiz } from "@/features/curriculum/data/chapterQuizzes";
 
 interface ChapterDetailPageProps {
   params: Promise<{ chapterId: string }>;

@@ -71,7 +71,7 @@ export async function GET(req: Request) {
       });
     }
 
-    const prompt = `You are a helpful AI curriculum editor. Create exactly 10 multiple-choice questions (MCQs) in Hindi (using Devanagari script) for a comprehensive Chapter End Test for the chapter "${chapter.name}".
+    const prompt = `You are a helpful AI curriculum editor. Create exactly 10 multiple-choice questions (MCQs) in simple english for a comprehensive Chapter End Test for the chapter "${chapter.name}".
 The topics covered in this chapter are: ${topics.join(", ")}.
 
 Guidelines:

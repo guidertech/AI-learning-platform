@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   calculateSubjectTopicProgress,
   type SubjectTopicProgress,
-} from "@/lib/subjectTopicProgress";
+} from "@/features/progress";
 
 const englishText = (text: string) => text;
 

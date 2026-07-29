@@ -5,12 +5,11 @@ import { useRouter } from "next/navigation";
 import { useLearning } from "@/context/LearningContext";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
-import LearningStepCard from "@/components/learning/LearningStepCard";
-import MayaPanel from "@/components/learning/MayaPanel";
+import { LearningStepCard, saveLastLearning } from "@/features/learning";
+import { MayaPanel } from "@/features/maya";
 import LoadingSkeleton from "@/components/layout/LoadingSkeleton";
-import { topicContents } from "@/lib/mock/topicContent";
+import { topicContents } from "@/features/learning/data/topicContent";
 import { createClient } from "@/lib/supabase/client";
-import {saveLastLearning} from "@/lib/lastLearning";
 
 interface LearningWorkspacePageProps {
   params: Promise<{ conceptId: string }>;
@@ -29,6 +28,7 @@ export default function LearningWorkspacePage({ params }: LearningWorkspacePageP
   const [nextTopicSlug, setNextTopicSlug] = useState<string | null>(null);
   const [isLastTopic, setIsLastTopic] = useState(false);
   const [topicContent, setTopicContent] = useState<any>(null);
+  const [dynamicNoteImages, setDynamicNoteImages] = useState<string[]>([]);
 
   // AI Topic Test State
   const [showTestModal, setShowTestModal] = useState(false);
@@ -132,6 +132,7 @@ export default function LearningWorkspacePage({ params }: LearningWorkspacePageP
   useEffect(() => {
     async function loadTopic() {
       const supabase = createClient();
+      setDynamicNoteImages([]);
       try {
         let topicData: any = null;
         let chapterData: any = null;
@@ -298,6 +299,53 @@ export default function LearningWorkspacePage({ params }: LearningWorkspacePageP
         const loadedContent = topicContents[conceptId] || defaultTopicContent;
         setTopicContent(loadedContent);
 
+        // Fetch dynamic note images directly from topic_notes_images table by topic_id
+        try {
+          const rawId = topicData?.topic_id || topicData?.id;
+          const numId = parseInt(String(rawId), 10);
+          let fetchedRow: any = null;
+
+          // 1. Primary Query: Match topic_id column in topic_notes_images (numeric or string)
+          if (!isNaN(numId)) {
+            const { data: rowByTopicId } = await supabase
+              .from("topic_notes_images")
+              .select("*")
+              .eq("topic_id", numId)
+              .maybeSingle();
+            if (rowByTopicId) fetchedRow = rowByTopicId;
+          }
+
+          if (!fetchedRow && rawId) {
+            const { data: rowByStringTopicId } = await supabase
+              .from("topic_notes_images")
+              .select("*")
+              .eq("topic_id", String(rawId))
+              .maybeSingle();
+            if (rowByStringTopicId) fetchedRow = rowByStringTopicId;
+          }
+
+          // 2. Fallback: Match by primary key id
+          if (!fetchedRow && rawId) {
+            const { data: rowById } = await supabase
+              .from("topic_notes_images")
+              .select("*")
+              .eq("id", String(rawId))
+              .maybeSingle();
+            if (rowById) fetchedRow = rowById;
+          }
+
+          if (fetchedRow) {
+            const urls: string[] = [];
+            if (fetchedRow.image_url_1) urls.push(fetchedRow.image_url_1);
+            if (fetchedRow.image_url_2) urls.push(fetchedRow.image_url_2);
+            if (urls.length > 0) {
+              setDynamicNoteImages(urls);
+            }
+          }
+        } catch (imgErr) {
+          console.warn("Could not fetch topic_notes_images:", imgErr);
+        }
+
       } catch (err) {
         console.error("Error loading topic:", err);
         const humanName = String(conceptId)
@@ -455,46 +503,87 @@ export default function LearningWorkspacePage({ params }: LearningWorkspacePageP
       const passed = newScore >= 2;
       setTestPassed(passed);
       
-      if (passed && dbTopic) {
+      if (passed) {
         setSavingProgress(true);
         try {
           const supabase = createClient();
           const { data: { user } } = await supabase.auth.getUser();
-          const { data: { session } } = await supabase.auth.getSession();
 
-          const rawTopicId = dbTopic.topic_id || dbTopic.id;
-          const numTopicId = parseInt(String(rawTopicId), 10);
+          let currentUserId = user?.id;
+          if (!currentUserId) {
+            console.warn("[saveTopicProgress] No authenticated Supabase user found.");
+          } else {
+            let numericTopicId: number | null = null;
 
-          if (!isNaN(numTopicId)) {
-            const currentUserId = user?.id || localStorage.getItem("classorbit_profile_id") || "profile-guest";
-
-            // Local fallback persistence
-            try {
-              localStorage.setItem(`completed_topic_${numTopicId}`, "true");
-              localStorage.setItem(`completed_topic_${currentUserId}_${numTopicId}`, "true");
-            } catch (e) {
-              console.error("LocalStorage save error:", e);
+            // 1. Try resolving numeric topic_id from dbTopic
+            const rawTopicId = dbTopic?.topic_id || dbTopic?.id || conceptId;
+            const parsed = parseInt(String(rawTopicId), 10);
+            if (!isNaN(parsed)) {
+              numericTopicId = parsed;
             }
 
-            // Call server API route with session auth token
-            const headers: Record<string, string> = { "Content-Type": "application/json" };
-            if (session?.access_token) {
-              headers["Authorization"] = `Bearer ${session.access_token}`;
+            // 2. Query topics table if topicId is a text slug
+            if (!numericTopicId && typeof conceptId === "string") {
+              const { data: foundTopic } = await supabase
+                .from("topics")
+                .select("topic_id, id")
+                .or(`slug.eq.${conceptId},id.eq.${conceptId}`)
+                .maybeSingle();
+
+              if (foundTopic) {
+                const foundId = parseInt(String(foundTopic.topic_id || foundTopic.id), 10);
+                if (!isNaN(foundId)) numericTopicId = foundId;
+              }
             }
 
-            const res = await fetch("/api/save-topic-progress", {
-              method: "POST",
-              headers,
-              body: JSON.stringify({ userId: currentUserId, topicId: numTopicId })
-            });
+            // 3. Query topics table by similarity
+            if (!numericTopicId && typeof conceptId === "string") {
+              const searchName = conceptId.replace(/-/g, " ");
+              const { data: foundByName } = await supabase
+                .from("topics")
+                .select("topic_id, id")
+                .ilike("topic_name", `%${searchName}%`)
+                .limit(1)
+                .maybeSingle();
 
-            const resData = await res.json();
-            if (resData.success) {
-              console.log("[saveTopicProgress] Successfully saved to user_topic_progress DB table:", resData.data);
-              setIsTopicCompleted(true);
+              if (foundByName) {
+                const foundId = parseInt(String(foundByName.topic_id || foundByName.id), 10);
+                if (!isNaN(foundId)) numericTopicId = foundId;
+              }
+            }
+
+            if (numericTopicId) {
+              console.log("[saveTopicProgress] Saving completion for user:", currentUserId, "topic_id:", numericTopicId);
+
+              // Local storage fallback
+              try {
+                localStorage.setItem(`completed_topic_${numericTopicId}`, "true");
+                localStorage.setItem(`completed_topic_${currentUserId}_${numericTopicId}`, "true");
+              } catch (e) {
+                console.error("LocalStorage save error:", e);
+              }
+
+              const { data: { session } } = await supabase.auth.getSession();
+              const headers: Record<string, string> = { "Content-Type": "application/json" };
+              if (session?.access_token) {
+                headers["Authorization"] = `Bearer ${session.access_token}`;
+              }
+
+              const res = await fetch("/api/save-topic-progress", {
+                method: "POST",
+                headers,
+                body: JSON.stringify({ userId: currentUserId, topicId: numericTopicId })
+              });
+
+              const resData = await res.json();
+              if (resData.success) {
+                console.log("[saveTopicProgress] Successfully saved to user_topic_progress DB table:", resData.data);
+                setIsTopicCompleted(true);
+              } else {
+                console.error("[saveTopicProgress] DB Save Error:", resData.error);
+              }
             } else {
-              console.error("[saveTopicProgress] DB Save Failed:", resData.error);
-              alert(`Progress could not be saved: ${resData.error}`);
+              console.error("[saveTopicProgress] Could not resolve integer topic_id for conceptId:", conceptId);
             }
           }
         } catch (e) {
@@ -519,7 +608,9 @@ export default function LearningWorkspacePage({ params }: LearningWorkspacePageP
     "https://images.unsplash.com/photo-1509228468518-180dd4864904?w=800&auto=format&fit=crop&q=60",
     "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&auto=format&fit=crop&q=60"
   ];
-  const noteImages = topicContent?.noteImages || defaultNoteImages;
+  const noteImages = dynamicNoteImages.length > 0
+    ? dynamicNoteImages
+    : (topicContent?.noteImages || defaultNoteImages);
 
   return (
     <PageContainer>

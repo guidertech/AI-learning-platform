@@ -54,28 +54,27 @@ export async function POST(req: Request) {
 
     console.log("[API save-last-learning] Saving values to last_learning:", values);
 
-    const { data: existing, error: selectError } = await supabase
+    let result = await supabase
       .from("last_learning")
-      .select("id")
+      .update(values)
       .eq("user_id", userId)
-      .maybeSingle();
+      .select();
 
-    if (selectError) {
-      console.warn("[API save-last-learning] Select warning:", selectError.message);
-    }
-
-    let result;
-    if (existing) {
-      result = await supabase
-        .from("last_learning")
-        .update(values)
-        .eq("user_id", userId)
-        .select();
-    } else {
+    if (!result.error && (!result.data || result.data.length === 0)) {
       result = await supabase
         .from("last_learning")
         .insert([values])
         .select();
+    }
+
+    if (result.data && result.data.length > 1) {
+      const idsToDelete = result.data.slice(1).map((row: any) => row.id);
+      if (idsToDelete.length > 0) {
+        await supabase
+          .from("last_learning")
+          .delete()
+          .in("id", idsToDelete);
+      }
     }
 
     if (result.error) {

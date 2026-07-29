@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import { QuestionResult } from "../page";
-import { markPrerequisiteCompleted } from "@/lib/prerequisiteHelper";
+import { markPrerequisiteCompleted } from "@/features/curriculum";
 
 interface ResultsPageProps {
   params: Promise<{ chapterId: string }>;

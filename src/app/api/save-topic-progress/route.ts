@@ -24,40 +24,60 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid topicId integer" }, { status: 400 });
     }
 
-    // Record topic completion in user_topic_progress table
-    const basePayload = {
-      user_id: userId,
-      topic_id: numericTopicId,
-      completed_at: new Date().toISOString()
-    };
+    console.log("[API save-topic-progress] Saving completion for user:", userId, "topic:", numericTopicId);
 
-    console.log("[API save-topic-progress] Saving completion for topic:", numericTopicId);
-
-    let {data, error} = await supabase
+    // 1. Check if a progress record already exists for this user and topic
+    const { data: existing } = await supabase
       .from("user_topic_progress")
-      .upsert({...basePayload, completed: true}, {onConflict: "user_id,topic_id"})
-      .select();
+      .select("id")
+      .eq("user_id", userId)
+      .eq("topic_id", numericTopicId)
+      .maybeSingle();
 
-    if (error && /completed/i.test(error.message)) {
-      const fallback = await supabase
+    let data: any = null;
+    let error: any = null;
+    const timestamp = new Date().toISOString();
+
+    if (existing) {
+      // Update existing record with matching schema column: completed
+      const updateRes = await supabase
         .from("user_topic_progress")
-        .upsert({...basePayload, is_completed: true}, {onConflict: "user_id,topic_id"})
+        .update({
+          completed: true,
+          completed_at: timestamp
+        })
+        .eq("id", existing.id)
         .select();
-      data = fallback.data;
-      error = fallback.error;
+
+      data = updateRes.data;
+      error = updateRes.error;
+    } else {
+      // Insert new record matching exact table schema (user_id, topic_id, completed, completed_at)
+      const insertRes = await supabase
+        .from("user_topic_progress")
+        .insert({
+          user_id: userId,
+          topic_id: numericTopicId,
+          completed: true,
+          completed_at: timestamp
+        })
+        .select();
+
+      data = insertRes.data;
+      error = insertRes.error;
     }
 
     if (error) {
-      console.error("[API save-topic-progress] Upsert error:", error.message);
-      return NextResponse.json({error: error.message}, {status: 400});
+      console.error("[API save-topic-progress] DB Error:", error.message);
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
     return NextResponse.json({ success: true, data });
   } catch (err: unknown) {
     console.error("[API save-topic-progress] Exception:", err);
     return NextResponse.json(
-      {error: err instanceof Error ? err.message : "Unknown progress save error"},
-      {status: 500},
+      { error: err instanceof Error ? err.message : "Unknown progress save error" },
+      { status: 500 },
     );
   }
 }

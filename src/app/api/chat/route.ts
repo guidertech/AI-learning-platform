@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildTutorSystemPrompt } from "@/lib/buildTutorSystemPrompt";
+import { buildTutorSystemPrompt } from "@/features/maya";
 
 type ConversationMessage = {sender: "USER" | "AI"; text: string};
 type ChatRequest = {
@@ -104,30 +104,49 @@ Conversation history:
 ${activeHistory.map((h) => `${h.sender === "USER" ? "Student" : "Maya"}: ${h.text.slice(0, 2_000)}`).join("\n")}
 `;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: systemPrompt + "\nStudent: " + message }]
-            }
-          ]
-        })
-      }
-    );
+    const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+    let replyText: string | null = null;
+    let lastErrorStatus = "";
 
-    if (!response.ok) {
-      console.warn("Gemini API returned an error, falling back to Socratic engine:", response.statusText);
-      return NextResponse.json({ text: getLocalSocraticReply(message, cleanString(topic), cleanString(subject)) });
+    for (const model of candidateModels) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [
+                {
+                  role: "user",
+                  parts: [{ text: systemPrompt + "\nStudent: " + message }]
+                }
+              ]
+            })
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const textCandidate = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (textCandidate) {
+            replyText = textCandidate;
+            break;
+          }
+        } else {
+          lastErrorStatus = `${response.status} ${response.statusText}`;
+          console.warn(`[AI Chat] Model ${model} returned error:`, lastErrorStatus);
+        }
+      } catch (err: any) {
+        console.warn(`[AI Chat] Error calling model ${model}:`, err?.message);
+      }
     }
 
-    const data = await response.json();
-    const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || getLocalSocraticReply(message, cleanString(topic), cleanString(subject));
-    
+    if (!replyText) {
+      console.warn("Gemini API returned errors for all models, falling back to Socratic engine:", lastErrorStatus);
+      replyText = getLocalSocraticReply(message, cleanString(topic), cleanString(subject));
+    }
+
     return NextResponse.json({ text: replyText });
   } catch (error) {
     console.error("Error in AI Chat Route:", error);

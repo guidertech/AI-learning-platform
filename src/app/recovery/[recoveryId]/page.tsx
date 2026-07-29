@@ -5,9 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLearning } from "@/context/LearningContext";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
-import RecoveryIntroCard from "@/components/recovery/RecoveryIntroCard";
-import RecoveryPlanCard from "@/components/recovery/RecoveryPlanCard";
-import RecoveryPracticeCard from "@/components/recovery/RecoveryPracticeCard";
+import { RecoveryIntroCard, RecoveryPlanCard, RecoveryPracticeCard } from "@/features/curriculum";
 
 interface FractionsRecoveryPageProps {
   params: Promise<{ recoveryId: string }>;

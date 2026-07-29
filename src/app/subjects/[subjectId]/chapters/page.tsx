@@ -10,7 +10,7 @@ import LoadingSkeleton from "@/components/layout/LoadingSkeleton";
 import { useLearning } from "@/context/LearningContext";
 import { createClient } from "@/lib/supabase/client";
 
-import { getChapterQuiz } from "@/lib/mock/chapterQuizzes";
+import { getChapterQuiz } from "@/features/curriculum/data/chapterQuizzes";
 
 interface ChaptersPageProps {
   params: Promise<{ subjectId: string }>;

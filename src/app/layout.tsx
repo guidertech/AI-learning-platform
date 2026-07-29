@@ -1,15 +1,14 @@
-import type {Metadata} from "next";
+import type { Metadata } from "next";
 import "./globals.css";
-import {LearningProvider} from "@/context/LearningContext";
-import {LanguageProvider} from "@/context/LanguageContext";
-import BrowserPageTranslator from "@/components/translation/BrowserPageTranslator";
+import { LearningProvider } from "@/context/LearningContext";
+import { LanguageProvider, BrowserPageTranslator } from "@/features/language";
 
 export const metadata: Metadata = {
   title: "ClassOrbit - Luminous Intelligence",
   description: "AI-powered student learning companion",
 };
 
-export default function RootLayout({children}: {children: React.ReactNode}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" dir="ltr" className="h-full antialiased" suppressHydrationWarning>
       <head>

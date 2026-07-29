@@ -5,12 +5,11 @@ import { useRouter } from "next/navigation";
 import { useLearning } from "@/context/LearningContext";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
-import ContinueLearningCard from "@/components/dashboard/ContinueLearningCard";
-import QuickActions from "@/components/dashboard/QuickActions";
+import { ContinueLearningCard, QuickActions } from "@/features/dashboard";
 import LoadingSkeleton from "@/components/layout/LoadingSkeleton";
 import { createClient } from "@/lib/supabase/client";
-import { getLastLearning } from "@/lib/lastLearning";
-import { calculateSubjectTopicProgress, SubjectTopicProgress } from "@/lib/subjectTopicProgress";
+import { getLastLearning } from "@/features/learning";
+import { calculateSubjectTopicProgress, type SubjectTopicProgress } from "@/features/progress";
 
 type ContinueLearningData = {
   subjectName: string;
@@ -121,56 +120,87 @@ export default function DashboardPage() {
         const lastLearningRow = await getLastLearning(supabase, user.id).catch(() => null);
         if (lastLearningRow) {
           setHasLearningHistory(true);
-          let { data: lastSubject } = await supabase
-            .from("subjects")
-            .select("name")
-            .eq("subject_id", lastLearningRow.subject_id)
-            .maybeSingle();
-          if (!lastSubject && !isNaN(Number(lastLearningRow.subject_id))) {
-            const { data: subById } = await supabase
-              .from("subjects")
-              .select("name")
-              .eq("id", Number(lastLearningRow.subject_id))
-              .maybeSingle();
-            lastSubject = subById;
+          let lastSubject: any = null;
+          if (lastLearningRow.subject_id) {
+            const numSubId = Number(lastLearningRow.subject_id);
+            if (!isNaN(numSubId)) {
+              const { data: s1 } = await supabase
+                .from("subjects")
+                .select("name")
+                .eq("subject_id", numSubId)
+                .maybeSingle();
+              lastSubject = s1;
+              if (!lastSubject) {
+                const { data: s2 } = await supabase
+                  .from("subjects")
+                  .select("name")
+                  .eq("id", numSubId)
+                  .maybeSingle()
+                  .catch(() => ({ data: null }));
+                lastSubject = s2;
+              }
+            }
           }
 
-          let { data: lastChapter } = await supabase
-            .from("chapters")
-            .select("name")
-            .eq("chapter_id", lastLearningRow.chapter_id)
-            .maybeSingle();
-          if (!lastChapter && !isNaN(Number(lastLearningRow.chapter_id))) {
-            const { data: chById } = await supabase
-              .from("chapters")
-              .select("name")
-              .eq("id", Number(lastLearningRow.chapter_id))
-              .maybeSingle();
-            lastChapter = chById;
+          let lastChapter: any = null;
+          if (lastLearningRow.chapter_id) {
+            const numChId = Number(lastLearningRow.chapter_id);
+            if (!isNaN(numChId)) {
+              const { data: c1 } = await supabase
+                .from("chapters")
+                .select("name")
+                .eq("chapter_id", numChId)
+                .maybeSingle();
+              lastChapter = c1;
+              if (!lastChapter) {
+                const { data: c2 } = await supabase
+                  .from("chapters")
+                  .select("name")
+                  .eq("id", numChId)
+                  .maybeSingle()
+                  .catch(() => ({ data: null }));
+                lastChapter = c2;
+              }
+            }
           }
 
-          let { data: lastTopic } = await supabase
-            .from("topics")
-            .select("topic_name, slug, topic_id")
-            .eq("topic_id", lastLearningRow.topic_id)
-            .maybeSingle();
-
-          if (!lastTopic && !isNaN(Number(lastLearningRow.topic_id))) {
-            const { data: topicById } = await supabase
-              .from("topics")
-              .select("topic_name, slug, topic_id")
-              .eq("id", Number(lastLearningRow.topic_id))
-              .maybeSingle();
-            lastTopic = topicById;
+          let lastTopic: any = null;
+          if (lastLearningRow.topic_id) {
+            const numTopicId = Number(lastLearningRow.topic_id);
+            if (!isNaN(numTopicId)) {
+              const { data: t1 } = await supabase
+                .from("topics")
+                .select("*")
+                .eq("topic_id", numTopicId)
+                .maybeSingle();
+              lastTopic = t1;
+              if (!lastTopic) {
+                const { data: t2 } = await supabase
+                  .from("topics")
+                  .select("*")
+                  .eq("id", numTopicId)
+                  .maybeSingle()
+                  .catch(() => ({ data: null }));
+                lastTopic = t2;
+              }
+            }
+            if (!lastTopic) {
+              const { data: t3 } = await supabase
+                .from("topics")
+                .select("*")
+                .eq("slug", String(lastLearningRow.topic_id))
+                .maybeSingle();
+              lastTopic = t3;
+            }
           }
 
           if (lastSubject || lastChapter || lastTopic) {
             setLastLearning({
               subjectName: lastSubject?.name || activeSubject || "Curriculum",
               chapterTitle: lastChapter?.name || activeChapter || "Chapter Overview",
-              topicTitle: lastTopic?.topic_name || activeTopic || "Topic Lesson",
+              topicTitle: lastTopic?.topic_name || lastTopic?.name || activeTopic || "Topic Lesson",
               percentComplete: percentComplete || 0,
-              resumeHref: lastTopic ? `/learning/${lastTopic.slug || lastTopic.topic_id}` : "/subjects",
+              resumeHref: lastTopic ? `/learning/${lastTopic.slug || lastTopic.topic_id || lastTopic.id}` : "/subjects",
             });
           }
         } else {

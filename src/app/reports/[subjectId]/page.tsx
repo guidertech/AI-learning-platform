@@ -320,66 +320,6 @@ export default function DetailedSubjectReportPage({ params }: SubjectReportPageP
           )}
         </div>
 
-        {/* ── Test Attempts History Log ─────────────────────────── */}
-        <div className="bg-white rounded-[28px] border border-outline-variant/15 shadow-sm p-6 space-y-5">
-          <div>
-            <h3 className="font-bold text-sm text-on-surface">Complete Test & Quiz Attempt Log</h3>
-            <p className="text-xs text-on-surface-variant font-medium mt-0.5">All logged test attempts for {subject.name}</p>
-          </div>
-
-          {testHistory.length === 0 ? (
-            <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-outline-variant/15">
-              <span className="material-symbols-outlined text-[36px] text-outline/60">history_edu</span>
-              <p className="text-xs text-on-surface-variant font-semibold mt-2">No test attempts logged yet.</p>
-              <p className="text-[10px] text-outline font-medium mt-1">Take chapter end tests to track your scores here.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-outline-variant/10 border border-outline-variant/10 rounded-2xl overflow-hidden">
-              {testHistory.map((test, idx) => (
-                <div
-                  key={idx}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50/20 hover:bg-slate-50 transition-all gap-4"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                      test.type === "Prerequisite" ? "bg-amber-500/10 text-amber-600" : "bg-primary/10 text-primary"
-                    }`}>
-                      <span className="material-symbols-outlined text-[18px]">
-                        {test.type === "Prerequisite" ? "assignment_turned_in" : "fact_check"}
-                      </span>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="font-bold text-xs text-on-surface">{test.chapterTitle}</h4>
-                        <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
-                          test.type === "Prerequisite"
-                            ? "bg-amber-50 text-amber-700 border-amber-200"
-                            : "bg-primary/5 text-primary border-primary/10"
-                        }`}>
-                          {test.type}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-on-surface-variant font-medium mt-1">
-                        Result: {test.correct} of {test.total} correct answers
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 justify-between sm:justify-end shrink-0">
-                    <div className="text-right">
-                      <p className={`text-base font-black ${test.passed ? "text-emerald-600" : "text-amber-600"}`}>
-                        {test.score}%
-                      </p>
-                      <p className="text-[9px] text-outline font-bold uppercase tracking-wider mt-0.5">
-                        {test.passed ? "Cleared" : "Needs Review"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
 
       </main>
     </PageContainer>

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {createClient} from "@/lib/supabase/client";
-import {getLastLearning} from "@/lib/lastLearning";
+import {getLastLearning} from "@/features/learning";
 
 
 export default function LearningBasePage() {

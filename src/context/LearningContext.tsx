@@ -17,7 +17,7 @@ import { SubjectProficiency } from "@/types/progress";
 import {
   initialChatMessages,
   mockWeaknesses,
-} from "@/lib/mock/learning";
+} from "@/features/curriculum/data/learning";
 
 interface LearningContextType {
   studentMins: number;

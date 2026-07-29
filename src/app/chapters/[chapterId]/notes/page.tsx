@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import { createClient } from "@/lib/supabase/client";
-import FlipBookViewer from "@/components/learning/FlipBookViewer";
+import { FlipBookViewer } from "@/features/learning";
 
 interface ChapterNotesPageProps {
   params: Promise<{ chapterId: string }>;

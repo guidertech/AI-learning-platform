@@ -12,7 +12,6 @@ export default function AppSidebar() {
   const navItems = [
     { key: "dashboard", name: "Dashboard", href: "/dashboard", icon: "dashboard" },
     { key: "subjects", name: "Subjects", href: "/subjects", icon: "import_contacts" },
-    { key: "aiWorkspace", name: "AI Workspace", href: "/learning", icon: "psychology" },
     { key: "aiHomework", name: "AI Homework", href: "/homework", icon: "assignment" },
     { key: "progressTracker", name: "Progress Tracker", href: "/progress", icon: "trending_up" },
     { key: "report", name: "Report", href: "/reports", icon: "bar_chart" },
@@ -68,16 +67,12 @@ export default function AppSidebar() {
 
       {/* User Session Info footer */}
       <div className="border-t border-outline-variant/30 pt-5 pb-1 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full overflow-hidden bg-primary-fixed border border-primary/10">
-          <img
-            className="w-full h-full object-cover"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuApJDxIvWyGdrw51oyBB7RoTwh3PN4ISeya5QHaa9Yx-1aMOlNdkvGjAqFuSNvVzcrmDETaKcU0E3efBD_adDGHcP4wweTOyOOk-TDNrX32UQCohTlRWen2r5dyS9VJtLI3xRL4sQ2iEmn3_ESbUbNiPch_Hmnk1WhAHwpdzHDy6sWFqUJkN8yYWARdlgMTKrWBTgjpRTZIa06b8LyV3JKfRSW5suMJzOxNvq2aGVDZdAhrela35LSOJCdVobsBjblSX8Rt8J9WujA"
-            alt="Student Profile"
-          />
+        <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+          {studentName ? studentName.charAt(0).toUpperCase() : <span className="material-symbols-outlined text-[20px]">person</span>}
         </div>
         <div className="overflow-hidden">
-          <p className="font-bold text-sm text-on-surface truncate">{studentName}</p>
-          <p className="text-xs text-on-surface-variant font-medium">{studentGrade} Student</p>
+          <p className="font-bold text-sm text-on-surface truncate">{studentName || "Student"}</p>
+          <p className="text-xs text-on-surface-variant font-medium">{studentGrade || "Grade 5"} Student</p>
         </div>
       </div>
     </aside>

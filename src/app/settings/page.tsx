@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import {useRouter} from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useLearning } from "@/context/LearningContext";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import { createClient } from "@/lib/supabase/client";
-import LanguageSelector from "@/components/translation/LanguageSelector";
+import { LanguageSelector } from "@/features/language";
 
 const englishText = (text: string) => text;
 
@@ -82,7 +82,7 @@ export default function SettingsPage() {
 
   return (
     <PageContainer>
-      <Topbar 
+      <Topbar
         title={labels.title}
         subtitle={labels.subtitle}
         showBack={true}
@@ -90,7 +90,7 @@ export default function SettingsPage() {
 
       <main className="p-4 md:p-8 max-w-[1200px] mx-auto w-full space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
+
           {/* Left Column: Avatar & Logout */}
           <div className="lg:col-span-4 space-y-6">
             <section className="bg-white p-6 rounded-[28px] border border-outline-variant/15 shadow-sm text-center flex flex-col items-center">
@@ -103,7 +103,7 @@ export default function SettingsPage() {
               <p className="text-xs text-on-surface-variant font-medium mt-0.5">{labels.studentSummary.replace("__GRADE__", studentGrade.match(/\d+/)?.[0] ?? studentGrade).replace("__AGE__", String(studentAge || 0))}</p>
               <p className="text-[10px] text-outline font-semibold mt-1 max-w-full truncate">{studentSchool}</p>
 
-              <button 
+              <button
                 onClick={handleLogout}
                 className="w-full mt-8 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs py-3 rounded-xl transition-all cursor-pointer border border-red-100 flex items-center justify-center gap-2"
               >
@@ -265,7 +265,7 @@ export default function SettingsPage() {
               <h4 className="font-bold text-xs text-outline uppercase tracking-wider pl-1">{labels.personalization}</h4>
 
               <LanguageSelector variant="settings" />
-              
+
               <div className="space-y-1.5">
                 <label htmlFor="select-persona" className="text-xs font-bold text-on-surface-variant flex items-center gap-1.5 pl-1">
                   <span className="material-symbols-outlined text-[14px] text-primary">psychology</span>
@@ -290,10 +290,10 @@ export default function SettingsPage() {
             {/* Help & Privacy */}
             <section className="bg-white p-6 rounded-2xl border border-outline-variant/15 shadow-sm space-y-4">
               <h4 className="font-bold text-xs text-outline uppercase tracking-wider pl-1">{labels.supportPrivacy}</h4>
-              
+
               <div className="space-y-3">
                 <div className="space-y-2">
-                  <div 
+                  <div
                     onClick={() => setFaqOpen(!faqOpen)}
                     className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-100 transition-all select-none"
                   >
@@ -325,12 +325,12 @@ export default function SettingsPage() {
                       ].map((item, idx) => {
                         const isQuestionOpen = activeFaqQuestion === idx;
                         return (
-                          <div 
-                            key={idx} 
+                          <div
+                            key={idx}
                             className="bg-white border border-outline-variant/10 rounded-xl overflow-hidden transition-all duration-200"
                           >
                             {/* Question Header */}
-                            <div 
+                            <div
                               onClick={() => setActiveFaqQuestion(isQuestionOpen ? null : idx)}
                               className="flex items-center justify-between p-3.5 cursor-pointer hover:bg-slate-50 transition-colors gap-3"
                             >
@@ -344,7 +344,7 @@ export default function SettingsPage() {
                                 {isQuestionOpen ? "remove" : "add"}
                               </span>
                             </div>
-                            
+
                             {/* Question Answer Panel */}
                             {isQuestionOpen && (
                               <div className="px-4 pb-3.5 pt-0.5 border-t border-outline-variant/5 animate-fade-in">
@@ -360,7 +360,7 @@ export default function SettingsPage() {
                   )}
                 </div>
 
-                 <div 
+                <div
                   onClick={() => router.push("/privacy")}
                   className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors"
                 >

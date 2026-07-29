@@ -2,7 +2,7 @@
 
 import React, { useState, use, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getChapterQuiz, MCQ } from "@/lib/mock/chapterQuizzes";
+import { getChapterQuiz, MCQ } from "@/features/curriculum/data/chapterQuizzes";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import EmptyState from "@/components/layout/EmptyState";

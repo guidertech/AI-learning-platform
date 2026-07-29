@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import EmptyState from "@/components/layout/EmptyState";
-import { getChapterQuiz, MCQ } from "@/lib/mock/chapterQuizzes";
-import { markPrerequisiteCompleted } from "@/lib/prerequisiteHelper";
+import { getChapterQuiz, MCQ } from "@/features/curriculum/data/chapterQuizzes";
+import { markPrerequisiteCompleted } from "@/features/curriculum";
 
 interface RecoveryTestPageProps {
   params: Promise<{ chapterId: string }>;
