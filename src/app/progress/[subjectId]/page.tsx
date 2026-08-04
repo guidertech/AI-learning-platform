@@ -6,6 +6,7 @@ import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import { useLearning } from "@/context/LearningContext";
 import { createClient } from "@/lib/supabase/client";
+import SubjectIcon from "@/components/SubjectIcon";
 
 // Fallback topic completion map for demonstration/mock topics
 const mockTopicCompletion: Record<string, boolean> = {
@@ -182,8 +183,12 @@ export default function SubjectProgressPage({ params }: SubjectProgressPageProps
         {/* ── Hero Banner ─────────────────────────────────── */}
         <div className={`bg-gradient-to-r ${theme?.gradient || 'from-slate-500 to-slate-400'} rounded-[28px] p-7 text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-6`}>
           <div className="flex items-center gap-5">
-            <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-inner">
-              <span className="material-symbols-outlined text-white text-[32px]" style={{ fontVariationSettings: "'FILL' 1" }}>{subject.icon || "calculate"}</span>
+            <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-xs shrink-0 overflow-hidden">
+              <SubjectIcon 
+                icon={subject.icon} 
+                sizeClassName="text-[54px]" 
+                className={theme?.text || "text-primary"} 
+              />
             </div>
             <div>
               <p className="text-white/70 text-xs font-bold uppercase tracking-wider">Topic Progress Tracker</p>

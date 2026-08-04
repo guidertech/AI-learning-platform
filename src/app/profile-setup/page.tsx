@@ -423,7 +423,7 @@ function getErrorMessage(
       return "Please enter a valid student name between 2 and 100 characters.";
 
     case "invalid_class":
-      return "Please select a class between Grade 1 and Grade 12.";
+      return "Please select a class between Grade 1 and Grade 8.";
 
     case "invalid_age":
       return "Please enter an age between 5 and 25 years.";

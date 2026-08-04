@@ -1,22 +1,11 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState, useEffect } from "react";
 import { useLanguage } from "../store/LanguageContext";
 
 const LANGUAGE_OPTIONS = [
-  { code: "auto", label: "🌐 Auto (Browser Default)" },
   { code: "en", label: "English" },
   { code: "hi", label: "हिन्दी" },
-  { code: "bn", label: "বাংলা" },
-  { code: "ta", label: "தமிழ்" },
-  { code: "te", label: "తెలుగు" },
-  { code: "mr", label: "मराठी" },
-  { code: "gu", label: "ગુજરાતી" },
-  { code: "kn", label: "ಕನ್ನಡ" },
-  { code: "ml", label: "മലയാളം" },
-  { code: "pa", label: "ਪੰਜਾਬੀ" },
-  { code: "or", label: "ଓଡ଼ିଆ" },
-  { code: "ur", label: "اردو" },
 ] as const;
 
 type LanguageSelectorProps = {
@@ -27,6 +16,12 @@ export default function LanguageSelector({
   variant = "compact",
 }: LanguageSelectorProps) {
   const id = useId();
+  const [isMounted, setIsMounted] = useState(false);
+  
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const {
     language,
     selection,
@@ -54,26 +49,26 @@ export default function LanguageSelector({
           <div>
             <label
               htmlFor={id}
-              className="flex items-center gap-2 text-xs font-bold text-on-surface-variant"
+              className="flex items-center gap-2 text-xs font-bold text-violet-950"
             >
-              <span className="material-symbols-outlined text-[17px] text-primary">
+              <span className="material-symbols-outlined text-[17px] text-violet-600">
                 language
               </span>
               Display Language
             </label>
-            <p className="mt-1 text-[10px] font-medium text-outline">
+            <p className="mt-1 text-[10px] font-semibold text-violet-800/70">
               Translate interface text in this browser only.
             </p>
           </div>
-          {selection === "auto" && (
-            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[9px] font-bold text-primary">
+          {isMounted && selection === "auto" && (
+            <span className="rounded-full bg-violet-500/10 border border-violet-500/20 px-2.5 py-1 text-[9px] font-bold text-violet-600">
               Detected: {language.toUpperCase()}
             </span>
           )}
         </div>
       )}
 
-      <div className="relative">
+      <div className="relative text-slate-800">
         {!isSettings && (
           <span className="material-symbols-outlined pointer-events-none absolute left-2.5 top-1/2 z-10 -translate-y-1/2 text-[18px] text-primary">
             language
@@ -82,27 +77,27 @@ export default function LanguageSelector({
         <select
           id={id}
           aria-label="Choose display language"
-          value={selection}
+          value={isMounted ? (selection === "auto" ? (language === "hi" ? "hi" : "en") : selection) : "en"}
           onChange={(event) => handleChange(event.target.value)}
           className={
             isSettings
-              ? "h-12 w-full appearance-none rounded-xl border border-outline-variant/20 bg-slate-50 px-4 pr-10 text-xs font-bold text-on-surface outline-none transition-colors hover:border-primary/40 focus:border-primary focus:ring-2 focus:ring-primary/10"
+              ? "h-12 w-full appearance-none rounded-xl border border-violet-100 bg-white px-4 pr-10 text-xs font-bold text-slate-800 outline-none transition-all hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
               : "h-10 max-w-[148px] appearance-none rounded-xl border border-outline-variant/20 bg-white/90 py-0 pl-9 pr-8 text-[11px] font-bold text-on-surface shadow-sm outline-none transition-colors hover:border-primary/40 focus:border-primary focus:ring-2 focus:ring-primary/10 sm:max-w-[190px]"
           }
         >
           {LANGUAGE_OPTIONS.map((option) => (
-            <option key={option.code} value={option.code}>
+            <option key={option.code} value={option.code} className="bg-white text-on-surface">
               {option.label}
             </option>
           ))}
         </select>
-        <span className="material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[17px] text-outline">
+        <span className={`material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[17px] ${isSettings ? "text-violet-700/80" : "text-outline"}`}>
           expand_more
         </span>
       </div>
 
       {isSettings && language !== "en" && availability !== "available" && (
-        <p className="px-1 text-[10px] font-semibold text-outline" role="status">
+        <p className="px-1 text-[10px] font-semibold text-violet-800/80" role="status">
           {availability === "unavailable"
             ? "Browser translation is unavailable. English will remain visible."
             : availability === "downloading" || availability === "downloadable"

@@ -86,7 +86,7 @@ export async function GET(req: Request) {
       });
     }
 
-    const prompt = `You are a helpful AI curriculum editor. Create exactly 5 multiple-choice questions (MCQs) in Hindi (using Devanagari script) to test a student's prerequisite knowledge for the chapter "${chapter.name}".
+    const prompt = `You are a helpful AI curriculum editor. Create exactly 5 multiple-choice questions (MCQs) in English to test a student's prerequisite knowledge for the chapter "${chapter.name}".
 The prerequisite topics to test are: ${topics.join(", ")}.
 
 Guidelines:
@@ -108,41 +108,51 @@ Guidelines:
   }
 ]`;
 
-    // Try each API key — if one is rate-limited (429), try the next
+    const candidateModels = [
+      "gemini-2.0-flash",
+      "gemini-1.5-flash"
+    ];
+
+    // Try each API key and model — if one is rate-limited (429) or fails, try the next config
     let apiResponse: Response | null = null;
     let lastError = "";
+
+    outerLoop:
     for (const key of apiKeys) {
       console.log(`[Prereq Quiz API] Trying API key ending ...${key!.slice(-6)}`);
-      const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [{ text: prompt }]
-              }
-            ],
-            generationConfig: {
-              responseMimeType: "application/json"
+      for (const model of candidateModels) {
+        try {
+          const resp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    role: "user",
+                    parts: [{ text: prompt }]
+                  }
+                ],
+                generationConfig: {
+                  responseMimeType: "application/json"
+                }
+              })
             }
-          })
+          );
+
+          if (resp.ok) {
+            apiResponse = resp;
+            break outerLoop;
+          }
+
+          const errText = await resp.text();
+          lastError = `Gemini API model ${model} returned status ${resp.status}: ${errText}`;
+          console.warn(`[Prereq Quiz API] Key ...${key!.slice(-6)} model ${model} failed: ${lastError}`);
+        } catch (err: any) {
+          lastError = err?.message || String(err);
+          console.error(`[Prereq Quiz API] Fetch exception for model ${model}:`, err);
         }
-      );
-
-      if (resp.ok) {
-        apiResponse = resp;
-        break;
-      }
-
-      lastError = `Gemini API returned status ${resp.status}`;
-      console.warn(`[Prereq Quiz API] Key ...${key!.slice(-6)} failed: ${lastError}`);
-
-      if (resp.status !== 429) {
-        // Non-rate-limit error — no point trying another key
-        break;
       }
     }
 

@@ -12,14 +12,14 @@ interface PageContainerProps {
 export default function PageContainer({ children, showNavbars = true }: PageContainerProps) {
   if (!showNavbars) {
     return (
-      <div className="min-h-screen bg-[#f8f9ff] text-on-surface flex flex-col font-sans w-full">
+      <div className="min-h-screen bg-background text-on-surface flex flex-col font-sans w-full">
         {children}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f9ff] text-on-surface flex flex-col md:flex-row font-sans w-full">
+    <div className="min-h-screen bg-background text-on-surface flex flex-col md:flex-row font-sans w-full">
       {/* Desktop Navigation Sidebar */}
       <div className="hidden md:block">
         <AppSidebar />

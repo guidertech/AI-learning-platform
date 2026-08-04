@@ -10,12 +10,12 @@ export default function BottomNav() {
   const navItems = [
     { name: "Home", href: "/dashboard", icon: "home" },
     { name: "Subjects", href: "/subjects", icon: "school" },
-    { name: "AI Tutor", href: "/learning/fractions", icon: "psychology" },
+    { name: "Leaderboard", href: "/leaderboard", icon: "emoji_events" },
     { name: "Profile", href: "/settings", icon: "person" }
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 w-full z-40 bg-white/90 backdrop-blur-md border-t border-outline-variant/15 flex justify-around items-center h-18 pb-safe-area-bottom pt-5 shadow-[0_-8px_20px_rgba(83,65,205,0.02)]">
+    <nav className="fixed bottom-5 left-4 right-4 z-40 bg-white/60 dark:bg-surface-container/40 backdrop-blur-xl border border-white/40 dark:border-outline-variant/10 rounded-2xl flex justify-around items-center h-16 px-2 shadow-[0_12px_32px_rgba(83,65,205,0.12)] select-none">
       {navItems.map((item) => {
         const isActive =
           item.href === "/dashboard"
@@ -26,18 +26,24 @@ export default function BottomNav() {
           <Link
             key={item.name}
             href={item.href}
-            className={`flex flex-col items-center justify-center flex-1 h-full select-none ${isActive
-              ? "text-primary font-bold"
-              : "text-on-surface-variant hover:text-primary transition-colors"
-              }`}
+            className={`flex flex-col items-center justify-center flex-1 h-12 rounded-xl transition-all duration-300 relative group ${
+              isActive
+                ? "text-primary font-bold scale-[1.02]"
+                : "text-on-surface-variant hover:text-primary"
+            }`}
           >
-            <span
-              className="material-symbols-outlined text-[22px]"
-              style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
-            >
-              {item.icon}
-            </span>
-            <span className="text-[10px] font-semibold mt-0.5 tracking-wide">{item.name}</span>
+            {isActive && (
+              <span className="absolute inset-0 rounded-xl bg-primary/10 border border-primary/10 z-0" />
+            )}
+            <div className="flex flex-col items-center justify-center z-10 group-hover:scale-105 transition-transform duration-300">
+              <span
+                className="material-symbols-outlined text-[20px]"
+                style={{ fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
+              >
+                {item.icon}
+              </span>
+              <span className="text-[9px] font-bold mt-0.5 tracking-wide">{item.name}</span>
+            </div>
           </Link>
         );
       })}

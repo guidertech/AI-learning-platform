@@ -71,7 +71,15 @@ export default function AITeacherCard({ studentName, messageText }: AITeacherCar
       <div className="space-y-1 flex-1 min-w-0">
         <div className="flex items-center justify-between">
           <span className="text-[9px] text-primary uppercase font-bold tracking-wider">Maya AI Tutor</span>
-          <div data-no-translate className="flex items-center gap-1.5">
+          <div data-no-translate className="flex items-center gap-2">
+            {isSpeaking && (
+              <div className="flex items-end gap-0.5 h-3.5 px-1 shrink-0 self-center" aria-hidden="true">
+                <span className="w-[2px] h-2 bg-primary rounded-full animate-mini-voice-1" />
+                <span className="w-[2px] h-3.5 bg-primary rounded-full animate-mini-voice-2" />
+                <span className="w-[2px] h-1.5 bg-primary rounded-full animate-mini-voice-3" />
+                <span className="w-[2px] h-2.5 bg-primary rounded-full animate-mini-voice-4" />
+              </div>
+            )}
             <button
               onClick={handleSpeak}
               disabled={isPreparingSpeech}

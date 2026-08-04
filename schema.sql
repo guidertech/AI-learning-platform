@@ -89,11 +89,7 @@ INSERT INTO public.classes (class_number, class_name) VALUES
 (5, 'Grade 5'),
 (6, 'Grade 6'),
 (7, 'Grade 7'),
-(8, 'Grade 8'),
-(9, 'Grade 9'),
-(10, 'Grade 10'),
-(11, 'Grade 11'),
-(12, 'Grade 12')
+(8, 'Grade 8')
 ON CONFLICT DO NOTHING;
 
 -- 6. Create Subjects Table

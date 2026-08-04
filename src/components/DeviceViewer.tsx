@@ -10,7 +10,7 @@ interface DeviceViewerProps {
 
 export default function DeviceViewer({ children }: DeviceViewerProps) {
   return (
-    <div className="min-h-screen bg-[#f8f9ff] text-on-background flex flex-col font-sans w-full">
+    <div className="min-h-screen bg-background text-on-background flex flex-col font-sans w-full">
       {/* 
         Fully responsive layout wrapper.
         Removes the iPhone bezel simulation on desktop and lets the app flow natively 

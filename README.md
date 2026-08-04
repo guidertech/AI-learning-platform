@@ -1,6 +1,6 @@
 # ClassOrbit: AI-Powered Socratic Learning Platform
 
-ClassOrbit is a premium, interactive educational platform designed for students in Grades 1–12. It features **Maya**, a voice-enabled 3D AI companion that guides students through personalized recovery lessons, tests concept mastery, and offers customized tutoring based on cognitive progress.
+ClassOrbit is a premium, interactive educational platform designed for students in Grades 1–8. It features **Maya**, a voice-enabled 3D AI companion that guides students through personalized recovery lessons, tests concept mastery, and offers customized tutoring based on cognitive progress.
 
 This document details the features implemented in the `feature/ai-voice` branch.
 

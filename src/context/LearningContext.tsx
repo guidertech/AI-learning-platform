@@ -69,6 +69,11 @@ interface LearningContextType {
   setActiveAITranscription: (text: string) => void;
 
   subjectProficiencies: SubjectProficiency[];
+  sidebarCollapsed: boolean;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  isSidebarHydrated: boolean;
+  studentXp: number;
+  studentLevel: number;
 }
 
 type LocalQuizAttempt = {
@@ -220,7 +225,7 @@ function parseGradeNumber(
   if (
     !Number.isInteger(gradeNumber) ||
     gradeNumber < 1 ||
-    gradeNumber > 12
+    gradeNumber > 8
   ) {
     return null;
   }
@@ -283,6 +288,9 @@ export function LearningProvider({
     setStudentTutorPersona,
   ] = useState("Socratic");
 
+  const [studentXp, setStudentXp] = useState(0);
+  const [studentLevel, setStudentLevel] = useState(0);
+
   const [activeSubject, setActiveSubject] =
     useState("Mathematics");
 
@@ -309,6 +317,22 @@ export function LearningProvider({
     isAISpeaking,
     setIsAISpeaking,
   ] = useState(false);
+
+  const [sidebarCollapsed, setSidebarCollapsedState] = useState(false);
+  const [isSidebarHydrated, setIsSidebarHydrated] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("sidebar-collapsed");
+    if (stored === "true") {
+      setSidebarCollapsedState(true);
+    }
+    setIsSidebarHydrated(true);
+  }, []);
+
+  const setSidebarCollapsed = (collapsed: boolean) => {
+    setSidebarCollapsedState(collapsed);
+    localStorage.setItem("sidebar-collapsed", String(collapsed));
+  };
 
   const [
     activeAITranscription,
@@ -462,6 +486,50 @@ export function LearningProvider({
       setStudentAge(
         profile.age ?? 10
       );
+
+      // Calculate XP and levels
+      const { data: topicsData } = await supabase.from("topics").select("topic_id, chapter_id");
+      const { data: progressData } = await supabase
+        .from("user_topic_progress")
+        .select("topic_id, completed")
+        .eq("user_id", user.id);
+
+      const topicsList = topicsData || [];
+      const progressList = progressData || [];
+
+      const completedTopicIds = new Set(
+        progressList
+          .filter((p: any) => p.completed === true)
+          .map((p: any) => p.topic_id)
+      );
+
+      // Group topics by chapter_id
+      const chapterTopicMap = new Map<string, string[]>();
+      topicsList.forEach((t: any) => {
+        const list = chapterTopicMap.get(t.chapter_id) || [];
+        list.push(t.topic_id);
+        chapterTopicMap.set(t.chapter_id, list);
+      });
+
+      // Count chapters where all topics are completed
+      let doneChapters = 0;
+      chapterTopicMap.forEach((topicIds) => {
+        if (topicIds.length > 0) {
+          const allCompleted = topicIds.every((tid) => completedTopicIds.has(tid));
+          if (allCompleted) {
+            doneChapters++;
+          }
+        }
+      });
+
+      const calculatedXp = completedTopicIds.size * 5 + doneChapters * 20;
+      let calculatedLevel = 0;
+      if (calculatedXp >= 40) {
+        calculatedLevel = Math.floor(Math.log2(calculatedXp / 40)) + 1;
+      }
+
+      setStudentXp(calculatedXp);
+      setStudentLevel(calculatedLevel);
     }
 
     if (pathname !== "/login" && pathname !== "/profile-setup") {
@@ -816,6 +884,11 @@ export function LearningProvider({
         setActiveAITranscription,
 
         subjectProficiencies,
+        sidebarCollapsed,
+        setSidebarCollapsed,
+        isSidebarHydrated,
+        studentXp,
+        studentLevel,
       }}
     >
       {children}

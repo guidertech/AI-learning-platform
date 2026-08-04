@@ -134,7 +134,7 @@ function getFallbackQuestions(topicTitle: string, chapterTitle?: string, count: 
 
 export async function POST(req: Request) {
   try {
-    const { topicTitle, chapterTitle, count = 5 } = await req.json();
+    const { topicTitle, chapterTitle, count = 5, difficulty = "medium" } = await req.json();
 
     if (!topicTitle) {
       return NextResponse.json({ error: 'topicTitle is required' }, { status: 400 });
@@ -148,7 +148,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ questions: getFallbackQuestions(topicTitle, chapterTitle, questionCount) });
     }
 
-    const prompt = `You are Maya, an expert AI tutor. Generate exactly ${questionCount} Multiple Choice Questions (MCQs) for a practice quiz on the topic "${topicTitle}" in the chapter "${chapterTitle || 'General'}".
+    const prompt = `You are Maya, an expert AI tutor. Generate exactly ${questionCount} Multiple Choice Questions (MCQs) of "${difficulty}" difficulty for a practice quiz on the topic "${topicTitle}" in the chapter "${chapterTitle || 'General'}".
 
 Ensure the questions test conceptual understanding, problem-solving, and applications of "${topicTitle}".
 

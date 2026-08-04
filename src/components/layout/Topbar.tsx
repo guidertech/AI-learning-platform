@@ -14,11 +14,24 @@ interface TopbarProps {
 
 export default function Topbar({ title, subtitle, showBack = false }: TopbarProps) {
   const router = useRouter();
-  const { studentName } = useLearning();
+  const { studentName, studentLevel } = useLearning();
 
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md flex justify-between items-center w-full px-4 md:px-8 h-16 md:h-20 border-b border-outline-variant/10 select-none">
       <div className="flex min-w-0 items-center gap-4">
+        {/* Brand Logo inside Topbar */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-xs">
+            <span className="material-symbols-outlined text-white text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+              auto_awesome
+            </span>
+          </div>
+          <span className="font-display font-bold text-sm text-primary tracking-tight hidden sm:block">ClassOrbit</span>
+        </div>
+
+        {/* Brand Divider */}
+        <div className="h-5 w-px bg-slate-200/80 shrink-0" />
+
         {showBack && (
           <button
             onClick={() => router.back()}
@@ -33,15 +46,15 @@ export default function Topbar({ title, subtitle, showBack = false }: TopbarProp
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2 md:gap-3">
+      <div className="flex shrink-0 items-center gap-3">
         <LanguageSelector />
-        <button
-          onClick={() => router.push("/settings")}
-          aria-label="Open settings"
-          className="p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
-        >
-          <span className="material-symbols-outlined">settings</span>
-        </button>
+        
+        {/* Level pill badge in header */}
+        <div className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-full font-black text-[10px] uppercase tracking-wider shadow-2xs select-none border border-indigo-400/20">
+          <span className="material-symbols-outlined text-[13px]" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
+          <span>Level {studentLevel}</span>
+        </div>
+
         <div
           onClick={() => router.push("/settings")}
           role="button"
@@ -50,7 +63,7 @@ export default function Topbar({ title, subtitle, showBack = false }: TopbarProp
             if (event.key === "Enter" || event.key === " ") router.push("/settings");
           }}
           aria-label="Open student profile"
-          className="w-9 h-9 rounded-full border border-primary/20 bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0 cursor-pointer hover:border-primary hover:bg-primary/20 transition-all"
+          className="w-9 h-9 rounded-full border border-primary/20 bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0 cursor-pointer hover:border-primary hover:bg-primary/20 transition-all select-none"
         >
           {studentName ? studentName.charAt(0).toUpperCase() : <span className="material-symbols-outlined text-[18px]">person</span>}
         </div>

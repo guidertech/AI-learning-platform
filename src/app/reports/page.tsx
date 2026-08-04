@@ -6,6 +6,7 @@ import { useLearning } from "@/context/LearningContext";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import { createClient } from "@/lib/supabase/client";
+import SubjectIcon from "@/components/SubjectIcon";
 
 // Map display name → subject page id
 const subjectIdMap: Record<string, string> = {
@@ -179,19 +180,34 @@ export default function ReportsPage() {
       <main className="p-4 md:p-8 max-w-[1100px] mx-auto w-full space-y-6 overflow-hidden">
 
         {/* ── Summary Cards ─────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 select-none">
           {[
-            { icon: "person", label: "Class", value: studentGrade, color: "text-primary", bg: "bg-primary/8" },
-            { icon: "quiz", label: "Tests Attempted", value: `${totalAttemptsCount} Tests Completed`, color: "text-violet-600", bg: "bg-violet-50" },
-            { icon: "star", label: "Avg. Test Score", value: `${displayAvgScore}%`, color: "text-emerald-600", bg: "bg-emerald-50" },
+            { 
+              icon: "person", 
+              label: "Class", 
+              value: studentGrade, 
+              cardStyle: "bg-gradient-to-br from-blue-500 to-indigo-600 border-blue-400/80 shadow-[0_8px_20px_rgba(59,130,246,0.12)] text-white" 
+            },
+            { 
+              icon: "quiz", 
+              label: "Tests Attempted", 
+              value: `${totalAttemptsCount} Tests Completed`, 
+              cardStyle: "bg-gradient-to-br from-purple-500 to-indigo-600 border-purple-400/80 shadow-[0_8px_20px_rgba(139,92,246,0.12)] text-white" 
+            },
+            { 
+              icon: "star", 
+              label: "Avg. Test Score", 
+              value: `${displayAvgScore}%`, 
+              cardStyle: "bg-gradient-to-br from-emerald-500 to-teal-600 border-emerald-400/80 shadow-[0_8px_20px_rgba(16,185,129,0.12)] text-white" 
+            },
           ].map((s) => (
-            <div key={s.label} className="bg-white rounded-2xl border border-outline-variant/15 shadow-sm p-5 flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center shrink-0`}>
-                <span className={`material-symbols-outlined ${s.color} text-[20px]`} style={{ fontVariationSettings: "'FILL' 1" }}>{s.icon}</span>
+            <div key={s.label} className={`rounded-2xl border p-5 flex items-center gap-3 transition-all duration-300 hover:-translate-y-0.5 ${s.cardStyle}`}>
+              <div className="w-10 h-10 rounded-xl bg-white/20 border border-white/25 flex items-center justify-center shrink-0 text-white">
+                <span className="material-symbols-outlined text-white text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>{s.icon}</span>
               </div>
               <div>
-                <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">{s.label}</p>
-                <p className="text-base font-bold text-on-surface">{s.value}</p>
+                <p className="text-[10px] text-white/80 font-bold uppercase tracking-wider">{s.label}</p>
+                <p className="text-base font-bold text-white">{s.value}</p>
               </div>
             </div>
           ))}
@@ -225,8 +241,8 @@ export default function ReportsPage() {
                   className="bg-slate-50 rounded-2xl border border-slate-100 p-5 space-y-4 hover:border-primary/25 hover:bg-primary/5 transition-all cursor-pointer group"
                 >
                   <div className="flex items-start justify-between">
-                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center shadow-sm">
-                      <span className="material-symbols-outlined text-primary text-[20px]">{icon}</span>
+                    <div className="w-18 h-18 rounded-2xl bg-white border border-slate-100 flex items-center justify-center shadow-sm">
+                      <SubjectIcon icon={sub.icon} sizeClassName="text-[60px]" fallbackIcon={subjectIcons[sub.name] || "book"} />
                     </div>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${grade.color} ${grade.bg} ${grade.border}`}>
                       {grade.label}
@@ -256,7 +272,6 @@ export default function ReportsPage() {
             })}
           </div>
         </div>
-
       </main>
     </PageContainer>
   );

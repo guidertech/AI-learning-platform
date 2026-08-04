@@ -7,6 +7,7 @@ import Topbar from "@/components/layout/Topbar";
 import EmptyState from "@/components/layout/EmptyState";
 import { getChapterQuiz, MCQ } from "@/features/curriculum/data/chapterQuizzes";
 import { markPrerequisiteCompleted } from "@/features/curriculum";
+import Confetti from "@/components/layout/Confetti";
 
 interface RecoveryTestPageProps {
   params: Promise<{ chapterId: string }>;
@@ -232,6 +233,7 @@ export default function PrereqRecoveryTestPage({ params }: RecoveryTestPageProps
 
     return (
       <PageContainer>
+        {passed && <Confetti />}
         <Topbar title="Recovery Test Completed" />
         <main className="flex-grow flex items-center justify-center p-8 bg-[#f8f9ff]">
           <div className="bg-white p-8 rounded-[32px] border border-outline-variant/15 shadow-md w-full max-w-xl text-center space-y-6">

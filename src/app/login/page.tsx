@@ -72,7 +72,6 @@ export default function LoginPage() {
             <div className="w-full max-w-[500px] aspect-square flex items-center justify-center logo-float overflow-visible">
               <DotLottieReact
                 src={LOTTIE_URL}
-                loop
                 autoplay
                 style={{ width: "100%", height: "100%" }}
               />
@@ -99,7 +98,6 @@ export default function LoginPage() {
               <div className="w-48 h-48 flex items-center justify-center logo-float overflow-visible">
                 <DotLottieReact
                   src={LOTTIE_URL}
-                  loop
                   autoplay
                   style={{ width: "100%", height: "100%" }}
                 />
@@ -118,7 +116,7 @@ export default function LoginPage() {
           </div>
 
           {/* Glass Card Wrapper */}
-          <div className="w-full max-w-md bg-white/60 dark:bg-surface-container/30 backdrop-blur-xl border border-white/30 dark:border-outline-variant/10 rounded-[32px] p-8 md:p-10 flex flex-col items-center shadow-[0_24px_60px_rgba(83,65,205,0.08)] animate-fade-in-up">
+          <div className="w-full max-w-md bg-white/60 dark:bg-surface-container/30 backdrop-blur-xl border border-white/30 dark:border-outline-variant/10 rounded-[32px] p-8 md:p-10 flex flex-col items-center shadow-[0_24px_60px_rgba(83,65,205,0.08)] hover:shadow-[0_32px_80px_rgba(83,65,205,0.16)] hover:border-primary/20 hover:scale-[1.01] transition-all duration-500 ease-out animate-fade-in-up">
             
             {/* Logo Section */}
             <div className="flex flex-col items-center mb-8 text-center">

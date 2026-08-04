@@ -10,6 +10,7 @@ import LoadingSkeleton from "@/components/layout/LoadingSkeleton";
 import { createClient } from "@/lib/supabase/client";
 import { getLastLearning } from "@/features/learning";
 import { calculateSubjectTopicProgress, type SubjectTopicProgress } from "@/features/progress";
+import SubjectIcon from "@/components/SubjectIcon";
 
 type ContinueLearningData = {
   subjectName: string;
@@ -56,6 +57,26 @@ const localizedSubjectName = (name: string) => {
   if (norm === "maths" || norm.includes("math") || norm.includes("mathematics")) return "Mathematics";
   if (norm === "english") return "English";
   return name;
+};
+
+const getSubjectHoverClasses = (name: string) => {
+  const norm = name.trim().toLowerCase();
+  if (norm === "hindi") {
+    return "hover:border-primary/30 hover:bg-primary/5 hover:shadow-[0_12px_24px_rgba(83,65,205,0.12)]";
+  }
+  if (norm === "evs" || norm.includes("environment")) {
+    return "hover:border-[#0ea5e9]/30 hover:bg-[#0ea5e9]/5 hover:shadow-[0_12px_24px_rgba(14,165,233,0.12)]";
+  }
+  if (norm === "maths" || norm.includes("math") || norm.includes("mathematics")) {
+    return "hover:border-[#f59e0b]/30 hover:bg-[#f59e0b]/5 hover:shadow-[0_12px_24px_rgba(245,158,11,0.12)]";
+  }
+  if (norm === "english") {
+    return "hover:border-[#10b981]/30 hover:bg-[#10b981]/5 hover:shadow-[0_12px_24px_rgba(16,185,129,0.12)]";
+  }
+  if (norm.includes("sci")) {
+    return "hover:border-purple-600/30 hover:bg-purple-600/5 hover:shadow-[0_12px_24px_rgba(147,51,234,0.12)]";
+  }
+  return "hover:border-primary/30 hover:bg-primary/5 hover:shadow-[0_12px_24px_rgba(83,65,205,0.12)]";
 };
 
 export default function DashboardPage() {
@@ -232,23 +253,25 @@ export default function DashboardPage() {
         ) : (
           <>
             {/* Continue Learning Card */}
-            <ContinueLearningCard 
-              subjectName={lastLearning?.subjectName ?? activeSubject}
-              chapterTitle={lastLearning?.chapterTitle ?? activeChapter}
-              topicTitle={lastLearning?.topicTitle ?? activeTopic}
-              percentComplete={lastLearning?.percentComplete ?? percentComplete}
-              resumeHref={lastLearning?.resumeHref ?? "/subjects"}
-              hasLearningHistory={hasLearningHistory}
-            />
+            <div className="stagger-1">
+              <ContinueLearningCard 
+                subjectName={lastLearning?.subjectName ?? activeSubject}
+                chapterTitle={lastLearning?.chapterTitle ?? activeChapter}
+                topicTitle={lastLearning?.topicTitle ?? activeTopic}
+                percentComplete={lastLearning?.percentComplete ?? percentComplete}
+                resumeHref={lastLearning?.resumeHref ?? "/subjects"}
+                hasLearningHistory={hasLearningHistory}
+              />
+            </div>
 
             {/* Quick Actions Shortcuts */}
-            <section className="space-y-3">
+            <section className="space-y-3 stagger-2">
               <h3 className="font-bold text-sm text-on-surface pl-1">Quick Tools</h3>
               <QuickActions />
             </section>
 
             {/* Subject Analytics Overview section */}
-            <section className="bg-white p-6 rounded-[28px] border border-outline-variant/15 shadow-sm space-y-4">
+            <section className="bg-white p-6 rounded-[28px] border border-outline-variant/15 shadow-sm space-y-4 stagger-3">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-bold text-sm text-on-surface">Subject Analytics Overview</h3>
@@ -274,11 +297,11 @@ export default function DashboardPage() {
                     <div
                       key={idx}
                       onClick={() => router.push(subjectId ? `/progress/${subjectId}` : "/progress")}
-                      className="bg-slate-50/70 p-4 rounded-2xl border border-slate-100 space-y-3 hover:border-primary/30 hover:bg-primary/5 transition-all cursor-pointer group"
+                      className={`bg-slate-50/70 p-4 rounded-2xl border border-slate-100 space-y-3 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer group ${getSubjectHoverClasses(sub.name)}`}
                     >
                       <div className="flex justify-between items-center">
-                        <div className="w-8 h-8 rounded-xl bg-white border border-slate-100 flex items-center justify-center shadow-xs">
-                          <span className="material-symbols-outlined text-primary text-[18px]">{icon}</span>
+                        <div className="w-14 h-14 rounded-2xl bg-white border border-slate-100 flex items-center justify-center shadow-xs">
+                          <SubjectIcon icon={sub.icon} sizeClassName="text-[48px]" fallbackIcon={getSubjectIconName(sub.name)} />
                         </div>
                         {hasTopicCounts ? (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200">
