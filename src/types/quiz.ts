@@ -6,6 +6,15 @@ export interface QuizQuestion {
   explanation: string;
 }
 
+export interface MCQ {
+  id: string;
+  topic: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}
+
 export interface Quiz {
   id: string;
   topicId: string;

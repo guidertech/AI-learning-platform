@@ -469,12 +469,14 @@ export default function LearningWorkspacePage({ params }: LearningWorkspacePageP
     setTestScore(0);
     setCurrentTestQ(0);
     try {
+      const studentGrade = localStorage.getItem("classorbit_student_grade") || "5";
       const res = await fetch("/api/generate-topic-test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           topicTitle,
-          chapterTitle: activeChapterTitle
+          chapterTitle: activeChapterTitle,
+          grade: studentGrade
         })
       });
       const data = await res.json();

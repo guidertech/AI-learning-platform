@@ -2,10 +2,10 @@
 
 import React, { useState, use, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getChapterQuiz, MCQ } from "@/features/curriculum/data/chapterQuizzes";
+import { MCQ } from "@/types/quiz";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
-import EmptyState from "@/components/layout/EmptyState";
+
 import { createClient } from "@/lib/supabase/client";
 
 interface PrerequisitePageProps {
@@ -37,7 +37,7 @@ export default function PrerequisiteQuizPage({ params }: PrerequisitePageProps) 
     async function initQuiz() {
       try {
         const supabase = createClient();
-        
+
         // 1. Fetch chapter from database to see if prerequisite is required
         const { data: chapter, error: dbError } = await supabase
           .from("chapters")
@@ -65,43 +65,27 @@ export default function PrerequisiteQuizPage({ params }: PrerequisitePageProps) 
         }
 
         // 2. Fetch dynamically generated questions from API
-        const response = await fetch(`/api/generate-prereq-quiz?chapterId=${chapterId}`);
-        if (!response.ok) {
-          console.warn("[Prerequisite] API returned non-OK status, falling back to mock data.");
-          loadMockFallback();
-          return;
-        }
-
+        const studentGrade = localStorage.getItem("classorbit_student_grade") || "5";
+        const response = await fetch(`/api/generate-prereq-quiz?chapterId=${chapterId}&grade=${encodeURIComponent(studentGrade)}`);
         const data = await response.json();
-        
+
         if (data.requiresPrerequisite === false) {
           router.replace(`/chapters/${chapterId}`);
           return;
         }
 
-        if (data.fallback || !data.questions || data.questions.length === 0) {
-          console.warn("[Prerequisite] Falling back to mock quiz data.");
-          loadMockFallback();
-        } else {
+        if (data.questions && data.questions.length > 0) {
           setQuestions(data.questions);
-          setLoading(false);
+        } else {
+          setError("Failed to load prerequisite test questions.");
         }
+        setLoading(false);
 
       } catch (err: any) {
         console.error("[Prerequisite] Error initializing quiz:", err);
-        loadMockFallback();
+        setError("An unexpected error occurred while generating quiz.");
+        setLoading(false);
       }
-    }
-
-    function loadMockFallback() {
-      const mockData = getChapterQuiz(chapterId);
-      if (mockData && mockData.prerequisite && mockData.prerequisite.length > 0) {
-        setChapterTitle(mockData.chapterTitle);
-        setQuestions(mockData.prerequisite);
-      } else {
-        setError("No prerequisite questions found.");
-      }
-      setLoading(false);
     }
 
     void initQuiz();
@@ -247,7 +231,7 @@ export default function PrerequisiteQuizPage({ params }: PrerequisitePageProps) 
 
             {/* Options */}
             <div className="grid grid-cols-1 gap-3">
-              {currentQuestion.options.map((opt, idx) => {
+              {currentQuestion.options.map((opt: string, idx: number) => {
                 const isSelected = selectedIndex === idx;
 
                 let optStyle = "border-outline-variant/20 bg-slate-50 hover:bg-primary/5 hover:border-primary/30";
@@ -278,11 +262,10 @@ export default function PrerequisiteQuizPage({ params }: PrerequisitePageProps) 
               <button
                 onClick={handleNext}
                 disabled={selectedIndex === null}
-                className={`w-full h-12 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-                  selectedIndex !== null
-                    ? "bg-primary text-white shadow-md shadow-primary/20 cursor-pointer active:scale-[0.98]"
-                    : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                }`}
+                className={`w-full h-12 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${selectedIndex !== null
+                  ? "bg-primary text-white shadow-md shadow-primary/20 cursor-pointer active:scale-[0.98]"
+                  : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                  }`}
               >
                 <span>{currentIdx + 1 < totalQuestions ? "Next Question" : "Submit Test"}</span>
                 <span className="material-symbols-outlined text-[18px]">chevron_right</span>

@@ -5,9 +5,8 @@ import { useRouter } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import EmptyState from "@/components/layout/EmptyState";
-import { prereqLessons } from "@/features/curriculum/data/prereqLessons";
-import { MayaPanel } from "@/features/maya";
 import { useLearning } from "@/context/LearningContext";
+import FormattedMarkdown from "@/components/common/FormattedMarkdown";
 
 interface PrereqRecoveryPageProps {
   params: Promise<{ chapterId: string }>;
@@ -63,16 +62,12 @@ export default function PrereqRecoveryPage({ params }: PrereqRecoveryPageProps) 
   useEffect(() => {
     if (!currentTopic) return;
 
-    if (prereqLessons[currentTopic]) {
-      setLessonData(prereqLessons[currentTopic]);
-      return;
-    }
-
     // Generate dynamic lesson from API
     async function loadDynamicLesson() {
       setLessonLoading(true);
       try {
-        const res = await fetch(`/api/generate-prereq-lesson?topic=${encodeURIComponent(currentTopic)}&chapterId=${chapterId}`);
+        const studentGrade = localStorage.getItem("classorbit_student_grade") || "5";
+        const res = await fetch(`/api/generate-prereq-lesson?topic=${encodeURIComponent(currentTopic)}&chapterId=${chapterId}&grade=${encodeURIComponent(studentGrade)}`);
         if (!res.ok) throw new Error("Failed to load lesson");
         const data = await res.json();
         setLessonData(data);
@@ -80,10 +75,10 @@ export default function PrereqRecoveryPage({ params }: PrereqRecoveryPageProps) 
         console.error(err);
         setLessonData({
           topic: currentTopic,
-          title: `${currentTopic} की बुनियादी बातें`,
-          explanation: `इस विषय में हम ${currentTopic} के मूल सिद्धांतों को सीखेंगे ताकि हम मुख्य अध्याय को समझ सकें।`,
-          example: `${currentTopic} का एक सामान्य उदाहरण।`,
-          imageSrc: "https://images.unsplash.com/photo-1596495578065-6e076b888b83?w=800&auto=format&fit=crop&q=60"
+          title: `🌟 ${currentTopic} – Foundational Overview`,
+          explanation: `Welcome! Below is a guide covering the fundamental concepts of **${currentTopic}** to prepare you for the chapter.`,
+          example: `Step-by-step example for **${currentTopic}**.`,
+          imageSrc: ""
         });
       } finally {
         setLessonLoading(false);
@@ -96,7 +91,7 @@ export default function PrereqRecoveryPage({ params }: PrereqRecoveryPageProps) 
   // Initialize Maya Chat when current topic or lessonData changes
   useEffect(() => {
     if (currentTopic && lessonData) {
-      const promptText = `नमस्ते! मैंने देखा कि आपको '${currentTopic}' विषय में थोड़ी कठिनाई हो रही थी। आइए इसे मिलकर समझते हैं। आप मुझसे इस बारे में कोई भी सवाल पूछ सकते हैं!`;
+      const promptText = `Hello! I noticed you had a bit of trouble with '${currentTopic}'. Let's break it down together! Feel free to ask me any questions about it!`;
       initializeChatForTopic(
         `Prerequisite Support: ${currentTopic}`,
         promptText
@@ -158,7 +153,7 @@ export default function PrereqRecoveryPage({ params }: PrereqRecoveryPageProps) 
       <main className="flex flex-col h-[calc(100dvh-64px)] md:h-[calc(100dvh-80px)] overflow-hidden">
         <div className="flex-grow overflow-y-auto bg-[#f8f9ff] px-4 py-6 md:px-10 md:py-8">
           <div className="max-w-[720px] mx-auto space-y-6">
-            
+
             {/* Recovery Progress Header */}
             <div className="bg-white rounded-2xl p-4 border border-outline-variant/15 shadow-sm space-y-2">
               <div className="flex justify-between items-center text-xs font-bold text-outline uppercase tracking-wider">
@@ -184,37 +179,29 @@ export default function PrereqRecoveryPage({ params }: PrereqRecoveryPageProps) 
                 </div>
                 <div className="text-center space-y-1">
                   <p className="text-sm font-bold text-on-surface">Maya is preparing your support lesson...</p>
-                  <p className="text-xs font-semibold text-outline">Generating custom explanation and solved examples in Hindi for &quot;{currentTopic}&quot;.</p>
+                  <p className="text-xs font-semibold text-outline">Generating custom explanation with clean markdown and tables for &quot;{currentTopic}&quot;.</p>
                 </div>
               </section>
             ) : lessonData ? (
-              <section className="bg-white rounded-[28px] p-6 border border-outline-variant/15 shadow-sm space-y-5">
-                <div className="flex justify-between items-start">
+              <section className="bg-white rounded-[28px] p-6 md:p-8 border border-outline-variant/15 shadow-sm space-y-5">
+                <div className="flex justify-between items-start border-b border-slate-100 pb-4">
                   <div>
-                    <span className="inline-flex px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-primary/10 text-primary uppercase">
+                    <span className="inline-flex px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-primary/10 text-primary uppercase tracking-wide">
                       📖 Support Lesson
                     </span>
-                    <h2 className="font-display font-bold text-lg text-on-surface mt-1.5">{lessonData.title}</h2>
+                    <h2 className="font-display font-bold text-xl text-on-surface mt-1.5 flex items-center gap-2">
+                      {lessonData.title}
+                    </h2>
                   </div>
                 </div>
 
-                <div className="aspect-video rounded-2xl bg-slate-100 overflow-hidden relative border border-outline-variant/10">
-                  <img
-                    className="w-full h-full object-cover"
-                    src={lessonData.imageSrc}
-                    alt={lessonData.title}
-                  />
-                </div>
-
                 <div className="space-y-4">
-                  <p className="text-xs text-on-surface-variant leading-relaxed whitespace-pre-line">
-                    {lessonData.explanation}
-                  </p>
+                  <FormattedMarkdown content={lessonData.explanation} />
 
                   {lessonData.example && (
-                    <div className="bg-slate-50 border border-outline-variant/20 p-4 rounded-xl space-y-1.5">
+                    <div className="bg-slate-50 border border-outline-variant/20 p-4 rounded-2xl space-y-2 mt-4">
                       <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">Solved Example</span>
-                      <p className="text-xs text-on-surface-variant font-medium leading-relaxed whitespace-pre-line">{lessonData.example}</p>
+                      <FormattedMarkdown content={lessonData.example} />
                     </div>
                   )}
                 </div>
@@ -229,9 +216,8 @@ export default function PrereqRecoveryPage({ params }: PrereqRecoveryPageProps) 
             <button
               onClick={handleNext}
               disabled={lessonLoading}
-              className={`w-full h-12 bg-primary text-white font-bold rounded-2xl shadow-md shadow-primary/20 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] hover:opacity-95 transition-all ${
-                lessonLoading ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+              className={`w-full h-12 bg-primary text-white font-bold rounded-2xl shadow-md shadow-primary/20 flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] hover:opacity-95 transition-all ${lessonLoading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
             >
               <span>{currentIdx + 1 < weakTopics.length ? "Next Weak Topic" : "Start Recovery Test"}</span>
               <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
@@ -241,9 +227,6 @@ export default function PrereqRecoveryPage({ params }: PrereqRecoveryPageProps) 
           </div>
         </div>
       </main>
-
-      {/* Maya Panel */}
-      <MayaPanel />
     </PageContainer>
   );
 }

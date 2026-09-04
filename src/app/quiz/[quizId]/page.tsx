@@ -108,6 +108,7 @@ export default function TopicQuizPage({ params }: QuizPageProps) {
   const fetchMCQs = async (tName: string, cName: string, diff: string = "medium") => {
     setErrorMsg(null);
     try {
+      const studentGrade = localStorage.getItem("classorbit_student_grade") || "5";
       const res = await fetch("/api/generate-topic-test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -115,7 +116,8 @@ export default function TopicQuizPage({ params }: QuizPageProps) {
           topicTitle: tName,
           chapterTitle: cName,
           count: 5,
-          difficulty: diff
+          difficulty: diff,
+          grade: studentGrade
         })
       });
 

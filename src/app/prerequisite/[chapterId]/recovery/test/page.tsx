@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import EmptyState from "@/components/layout/EmptyState";
-import { getChapterQuiz, MCQ } from "@/features/curriculum/data/chapterQuizzes";
+import { MCQ } from "@/types/quiz";
 import { markPrerequisiteCompleted } from "@/features/curriculum";
 import Confetti from "@/components/layout/Confetti";
 
@@ -22,8 +22,6 @@ type QuestionResult = {
 export default function PrereqRecoveryTestPage({ params }: RecoveryTestPageProps) {
   const router = useRouter();
   const { chapterId } = use(params);
-
-  const quizData = getChapterQuiz(chapterId);
 
   const [weakTopics, setWeakTopics] = useState<string[]>([]);
   const [questions, setQuestions] = useState<MCQ[]>([]);
@@ -67,26 +65,18 @@ export default function PrereqRecoveryTestPage({ params }: RecoveryTestPageProps
           return;
         }
 
-        // Try fetching dynamically generated questions for the weak topics
+        // Fetch dynamically generated questions for the weak topics
         try {
-          const res = await fetch(`/api/generate-prereq-quiz?chapterId=${chapterId}&weakTopics=${encodeURIComponent(weak.join(","))}`);
+          const studentGrade = localStorage.getItem("classorbit_student_grade") || "5";
+          const res = await fetch(`/api/generate-prereq-quiz?chapterId=${chapterId}&grade=${encodeURIComponent(studentGrade)}&weakTopics=${encodeURIComponent(weak.join(","))}`);
           if (!res.ok) throw new Error("API failed");
           const apiData = await res.json();
-          if (apiData.questions && apiData.questions.length > 0 && !apiData.fallback) {
+          if (apiData.questions && apiData.questions.length > 0) {
             setQuestions(apiData.questions);
-            setLoading(false);
-            return;
           }
         } catch (err) {
-          console.warn("[Recovery Test] Dynamic generation failed, falling back to mock data.", err);
+          console.error("[Recovery Test] Dynamic generation failed:", err);
         }
-
-        // Local mock fallback filtering
-        const localQuizData = getChapterQuiz(chapterId);
-        const localAllPrereqQuestions = localQuizData?.prerequisite ?? [];
-        const weakQuestions = localAllPrereqQuestions.filter((q) => weak.includes(q.topic));
-        const shuffled = [...weakQuestions].sort(() => 0.5 - Math.random());
-        setQuestions(shuffled);
 
       } catch (e) {
         console.error(e);
@@ -127,7 +117,7 @@ export default function PrereqRecoveryTestPage({ params }: RecoveryTestPageProps
         `prereq_results_${chapterId}`,
         JSON.stringify({
           chapterId,
-          chapterTitle: quizData?.chapterTitle || "Recovery Test",
+          chapterTitle: "Prerequisite Recovery Test",
           results: newResults.map(r => ({
             question: r.question,
             selectedIndex: r.selectedIndex,
@@ -350,7 +340,7 @@ export default function PrereqRecoveryTestPage({ params }: RecoveryTestPageProps
             </h2>
 
             <div className="grid grid-cols-1 gap-3">
-              {currentQuestion.options.map((opt, idx) => {
+              {currentQuestion.options.map((opt: string, idx: number) => {
                 const isSelected = selectedIndex === idx;
 
                 let optStyle = "border-outline-variant/20 bg-slate-50 hover:bg-primary/5 hover:border-primary/30";

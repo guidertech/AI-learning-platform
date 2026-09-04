@@ -25,27 +25,13 @@ export default function AskMayaInput({ onSendMessage, onQuickQuestion }: AskMaya
   };
 
   const quickReplies = activeContent?.quickReplies || [
-    "Explain $3\\frac{3}{4}$ equivalent fraction",
+    "Explain 3 3/4 equivalent fraction",
     "Recap converting mixed numbers",
     "Why is it called denominator?"
   ];
 
   return (
     <div className="space-y-3">
-      {/* Quick replies */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none hide-scrollbar select-none">
-        {quickReplies.map((reply) => (
-          <button
-            key={reply}
-            type="button"
-            onClick={() => onQuickQuestion(reply)}
-            className="px-3.5 py-1.5 bg-slate-50 border border-outline-variant/15 text-on-surface-variant font-medium text-[10px] rounded-full whitespace-nowrap active:scale-95 cursor-pointer shadow-sm hover:border-primary/30"
-          >
-            {reply.replace(/\$/g, "")}
-          </button>
-        ))}
-      </div>
-
       <form onSubmit={handleSubmit} className="flex gap-2 items-center">
         <input 
           className="flex-grow h-11 px-4 bg-slate-50 border border-outline-variant/15 rounded-xl text-xs focus:outline-none focus:border-primary/50" 

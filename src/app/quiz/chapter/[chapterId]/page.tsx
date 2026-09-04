@@ -2,7 +2,7 @@
 
 import React, { useState, use, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getChapterQuiz, MCQ } from "@/features/curriculum/data/chapterQuizzes";
+import { MCQ } from "@/types/quiz";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
 import EmptyState from "@/components/layout/EmptyState";
@@ -35,7 +35,6 @@ export default function ChapterEndQuizPage({ params }: ChapterEndQuizPageProps) 
     async function initQuiz() {
       try {
         const supabase = createClient();
-        // 1. Fetch chapter from database to resolve the legacy chapter_id code and real title
         const { data: dbChapter, error: chapterError } = await supabase
           .from("chapters")
           .select("id, chapter_id, name")
@@ -43,47 +42,29 @@ export default function ChapterEndQuizPage({ params }: ChapterEndQuizPageProps) 
           .maybeSingle();
 
         if (chapterError || !dbChapter) {
-          console.warn("[ChapterEndQuiz] Error or missing chapter in DB, falling back directly.");
-          loadMockFallback(chapterId, "Chapter Test");
+          setError("Chapter not found");
+          setLoading(false);
           return;
         }
 
-        const legacyChapterId = dbChapter.chapter_id;
         setChapterTitle(dbChapter.name);
         setChapterCode(Number(dbChapter.chapter_id));
 
-        // 2. Fetch dynamically generated questions from API
-        const response = await fetch(`/api/generate-chapter-quiz?chapterId=${chapterId}`);
-        if (!response.ok) {
-          console.warn("[ChapterEndQuiz] API returned non-OK status, falling back to mock data.");
-          loadMockFallback(legacyChapterId, dbChapter.name);
-          return;
-        }
-
+        const studentGrade = localStorage.getItem("classorbit_student_grade") || "5";
+        const response = await fetch(`/api/generate-chapter-quiz?chapterId=${chapterId}&grade=${encodeURIComponent(studentGrade)}`);
         const data = await response.json();
         
-        if (data.fallback || !data.questions || data.questions.length === 0) {
-          console.warn("[ChapterEndQuiz] API returned fallback instruction or empty questions, falling back to mock data.");
-          loadMockFallback(legacyChapterId, dbChapter.name);
-        } else {
+        if (data.questions && data.questions.length > 0) {
           setQuestions(data.questions);
-          setLoading(false);
+        } else {
+          setError("Failed to load chapter test questions.");
         }
       } catch (err: any) {
         console.error("[ChapterEndQuiz] Error initializing quiz:", err);
-        loadMockFallback(chapterId, "Chapter Test");
+        setError("An unexpected error occurred while loading chapter test.");
+      } finally {
+        setLoading(false);
       }
-    }
-
-    function loadMockFallback(legacyId: string, defaultTitle: string) {
-      const mockData = getChapterQuiz(legacyId);
-      if (mockData && mockData.chapterEnd && mockData.chapterEnd.length > 0) {
-        setChapterTitle(mockData.chapterTitle);
-        setQuestions(mockData.chapterEnd);
-      } else {
-        setError("No chapter test is available for this chapter.");
-      }
-      setLoading(false);
     }
 
     void initQuiz();
@@ -234,7 +215,7 @@ export default function ChapterEndQuizPage({ params }: ChapterEndQuizPageProps) 
 
             {/* Options list */}
             <div className="grid grid-cols-1 gap-3">
-              {currentQuestion.options.map((opt, idx) => {
+              {currentQuestion.options.map((opt: string, idx: number) => {
                 const isSelected = selectedIndex === idx;
 
                 let optStyle = "border-outline-variant/20 bg-slate-50 hover:bg-primary/5 hover:border-primary/30";

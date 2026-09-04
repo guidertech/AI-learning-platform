@@ -10,13 +10,9 @@ import LoadingSkeleton from "@/components/layout/LoadingSkeleton";
 import { useLearning } from "@/context/LearningContext";
 import { createClient } from "@/lib/supabase/client";
 
-import { getChapterQuiz } from "@/features/curriculum/data/chapterQuizzes";
-
 interface ChaptersPageProps {
   params: Promise<{ subjectId: string }>;
 }
-
-
 
 export default function SubjectChaptersPage({ params }: ChaptersPageProps) {
   const router = useRouter();
@@ -95,7 +91,6 @@ export default function SubjectChaptersPage({ params }: ChaptersPageProps) {
 
   const handleChapterClick = (chId: string) => {
     const chObj = chapters.find((c) => c.id === chId);
-    const quizData = getChapterQuiz(chId);
     
     if (chObj?.hasPrerequisite) {
       if (chObj.prerequisiteCompleted) {

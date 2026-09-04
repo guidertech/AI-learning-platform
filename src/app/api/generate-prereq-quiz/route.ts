@@ -77,94 +77,127 @@ export async function GET(req: Request) {
       process.env.GEMINI_API_KEY_2,
     ].filter((k) => k && k !== "placeholder" && k !== "");
 
+    // If no explicit keys configured, we still attempt default gemini-3.6-flash models
     if (apiKeys.length === 0) {
-      console.warn("[Prereq Quiz API] No GEMINI_API_KEY found. Returning mock fallback.");
-      return NextResponse.json({
-        requiresPrerequisite: true,
-        fallback: true,
-        message: "API key not configured. Please use mock data fallback."
-      });
+      apiKeys.push("placeholder-key-attempt");
     }
 
-    const prompt = `You are a helpful AI curriculum editor. Create exactly 5 multiple-choice questions (MCQs) in English to test a student's prerequisite knowledge for the chapter "${chapter.name}".
+    const gradeParam = searchParams.get("grade") || "5";
+    const timestampSeed = Date.now();
+    const prompt = `You are an expert school curriculum AI editor. Create exactly 5 BRAND NEW multiple-choice questions (MCQs) in English strictly tailored for Grade ${gradeParam} student level to test prerequisite knowledge for the chapter "${chapter.name}".
 The prerequisite topics to test are: ${topics.join(", ")}.
 
-Guidelines:
-1. Generate exactly 5 questions.
-2. Distribute the questions reasonably across these topics: ${topics.join(", ")}.
-3. For each question, provide exactly 4 options.
-4. Set correctIndex as the 0-based index of the correct option (0, 1, 2, or 3).
-5. Provide a simple, clear, and brief explanation of the answer in Hindi.
-6. The question, options, and explanation must be in clean, friendly Devanagari Hindi suitable for a Grade 5 student (or similar).
+CRITICAL GRADE LEVEL & DIFFICULTY RULES:
+1. All questions must strictly match Grade ${gradeParam} curriculum standards, difficulty, concepts, and vocabulary.
+2. Generate 5 FRESH and UNIQUE questions. Do NOT use overly simplistic Grade 1-2 questions unless the student is Grade 1-2 (Seed/Session ID: ${timestampSeed}).
+3. Distribute the questions reasonably across these topics: ${topics.join(", ")}.
+4. For each question, provide exactly 4 options.
+5. Set correctIndex as the 0-based index of the correct option (0, 1, 2, or 3).
+6. Provide a clear 1-2 sentence explanation suitable for a Grade ${gradeParam} student.
 7. Format the response strictly as a JSON array of objects conforming to this schema:
 [
   {
     "id": "q-1",
     "topic": "Specific Topic Name",
-    "question": "Question text in Devanagari Hindi",
+    "question": "Question text in english",
     "options": ["Option A", "Option B", "Option C", "Option D"],
     "correctIndex": 0,
-    "explanation": "Explanation in Hindi..."
+    "explanation": "Explanation in english..."
   }
 ]`;
 
-    const candidateModels = [
-      "gemini-2.0-flash",
-      "gemini-1.5-flash"
-    ];
+    let rawText = "";
 
-    // Try each API key and model — if one is rate-limited (429) or fails, try the next config
-    let apiResponse: Response | null = null;
-    let lastError = "";
+    // Try Groq API first if key is available
+    if (process.env.GROQ_API_KEY) {
+      try {
+        console.log("[Prereq Quiz API] Generating via Groq API...");
+        const Groq = (await import("groq-sdk")).default;
+        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+        const groqModel = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 
-    outerLoop:
-    for (const key of apiKeys) {
-      console.log(`[Prereq Quiz API] Trying API key ending ...${key!.slice(-6)}`);
-      for (const model of candidateModels) {
-        try {
-          const resp = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+        const completion = await groq.chat.completions.create({
+          model: groqModel,
+          messages: [
             {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                contents: [
-                  {
-                    role: "user",
-                    parts: [{ text: prompt }]
-                  }
-                ],
-                generationConfig: {
-                  responseMimeType: "application/json"
-                }
-              })
+              role: "user",
+              content: prompt
             }
-          );
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.9,
+          max_completion_tokens: 2048,
+        });
 
-          if (resp.ok) {
-            apiResponse = resp;
-            break outerLoop;
-          }
-
-          const errText = await resp.text();
-          lastError = `Gemini API model ${model} returned status ${resp.status}: ${errText}`;
-          console.warn(`[Prereq Quiz API] Key ...${key!.slice(-6)} model ${model} failed: ${lastError}`);
-        } catch (err: any) {
-          lastError = err?.message || String(err);
-          console.error(`[Prereq Quiz API] Fetch exception for model ${model}:`, err);
-        }
+        rawText = completion.choices[0]?.message?.content || "";
+        console.log("[Prereq Quiz API] Successfully generated quiz via Groq API");
+      } catch (groqErr: any) {
+        console.warn("[Prereq Quiz API] Groq API failed, falling back to Gemini:", groqErr?.message || groqErr);
       }
     }
 
-    if (!apiResponse) {
-      throw new Error(lastError || "All Gemini API keys failed");
+    // Fallback to Gemini if Groq did not return output
+    if (!rawText) {
+      const candidateModels = Array.from(new Set([
+        process.env.GEMINI_MODEL || "gemini-3.6-flash",
+        "gemini-3.6-flash",
+        "gemini-3.7-flash"
+      ]));
+
+      let apiResponse: Response | null = null;
+      let lastError = "";
+
+      outerLoop:
+      for (const key of apiKeys) {
+        console.log(`[Prereq Quiz API] Trying API key ending ...${key!.slice(-6)}`);
+        for (const model of candidateModels) {
+          try {
+            const resp = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                signal: AbortSignal.timeout(15000),
+                body: JSON.stringify({
+                  contents: [
+                    {
+                      role: "user",
+                      parts: [{ text: prompt }]
+                    }
+                  ],
+                  generationConfig: {
+                    responseMimeType: "application/json",
+                    temperature: 0.9
+                  }
+                })
+              }
+            );
+
+            if (resp.ok) {
+              apiResponse = resp;
+              break outerLoop;
+            }
+
+            const errText = await resp.text();
+            lastError = `Gemini API model ${model} returned status ${resp.status}: ${errText}`;
+            console.warn(`[Prereq Quiz API] Key ...${key!.slice(-6)} model ${model} failed: ${lastError}`);
+          } catch (err: any) {
+            lastError = err?.message || String(err);
+            console.error(`[Prereq Quiz API] Fetch exception for model ${model}:`, err);
+          }
+        }
+      }
+
+      if (!apiResponse) {
+        throw new Error(lastError || "All AI API attempts failed");
+      }
+
+      const apiData = await apiResponse.json();
+      rawText = apiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
     }
 
-    const apiData = await apiResponse.json();
-    const rawText = apiData.candidates?.[0]?.content?.parts?.[0]?.text;
-
     if (!rawText) {
-      throw new Error("No response text returned from Gemini API");
+      throw new Error("No response text returned from AI API");
     }
 
     const parsedQuestions = JSON.parse(rawText.trim());

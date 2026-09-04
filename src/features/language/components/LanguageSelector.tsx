@@ -70,7 +70,7 @@ export default function LanguageSelector({
 
       <div className="relative text-slate-800">
         {!isSettings && (
-          <span className="material-symbols-outlined pointer-events-none absolute left-2.5 top-1/2 z-10 -translate-y-1/2 text-[18px] text-primary">
+          <span className="material-symbols-outlined pointer-events-none absolute left-1/2 lg:left-2.5 top-1/2 z-10 -translate-x-1/2 lg:translate-x-0 -translate-y-1/2 text-[18px] text-primary">
             language
           </span>
         )}
@@ -82,7 +82,7 @@ export default function LanguageSelector({
           className={
             isSettings
               ? "h-12 w-full appearance-none rounded-xl border border-violet-100 bg-white px-4 pr-10 text-xs font-bold text-slate-800 outline-none transition-all hover:border-violet-300 focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-              : "h-10 max-w-[148px] appearance-none rounded-xl border border-outline-variant/20 bg-white/90 py-0 pl-9 pr-8 text-[11px] font-bold text-on-surface shadow-sm outline-none transition-colors hover:border-primary/40 focus:border-primary focus:ring-2 focus:ring-primary/10 sm:max-w-[190px]"
+              : "h-9 w-9 lg:h-10 lg:w-auto lg:max-w-[190px] appearance-none rounded-xl border border-outline-variant/20 bg-white/90 py-0 pl-0 lg:pl-9 pr-0 lg:pr-8 text-transparent lg:text-on-surface text-[11px] font-bold shadow-sm outline-none transition-colors hover:border-primary/40 focus:border-primary focus:ring-2 focus:ring-primary/10 cursor-pointer"
           }
         >
           {LANGUAGE_OPTIONS.map((option) => (
@@ -91,7 +91,7 @@ export default function LanguageSelector({
             </option>
           ))}
         </select>
-        <span className={`material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[17px] ${isSettings ? "text-violet-700/80" : "text-outline"}`}>
+        <span className={`material-symbols-outlined pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[17px] ${isSettings ? "text-violet-700/80" : "hidden lg:block text-outline"}`}>
           expand_more
         </span>
       </div>

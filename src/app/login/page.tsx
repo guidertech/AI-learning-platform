@@ -36,8 +36,9 @@ export default function LoginPage() {
     try {
       const supabase = createClient();
 
-      const callbackUrl =
-        `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
+      const siteUrl =
+        process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+      const callbackUrl = `${siteUrl.replace(/\/$/, "")}/auth/callback`;
 
       const { error } =
         await supabase.auth.signInWithOAuth({

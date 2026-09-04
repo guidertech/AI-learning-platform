@@ -134,7 +134,7 @@ function getFallbackQuestions(topicTitle: string, chapterTitle?: string, count: 
 
 export async function POST(req: Request) {
   try {
-    const { topicTitle, chapterTitle, count = 5, difficulty = "medium" } = await req.json();
+    const { topicTitle, chapterTitle, count = 5, difficulty = "medium", grade = "5" } = await req.json();
 
     if (!topicTitle) {
       return NextResponse.json({ error: 'topicTitle is required' }, { status: 400 });
@@ -148,11 +148,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ questions: getFallbackQuestions(topicTitle, chapterTitle, questionCount) });
     }
 
-    const prompt = `You are Maya, an expert AI tutor. Generate exactly ${questionCount} Multiple Choice Questions (MCQs) of "${difficulty}" difficulty for a practice quiz on the topic "${topicTitle}" in the chapter "${chapterTitle || 'General'}".
+    const prompt = `You are Maya, an expert AI tutor for Grade ${grade} students. Generate exactly ${questionCount} Multiple Choice Questions (MCQs) of "${difficulty}" difficulty for a practice quiz on the topic "${topicTitle}" in the chapter "${chapterTitle || 'General'}".
 
-Ensure the questions test conceptual understanding, problem-solving, and applications of "${topicTitle}".
-
-CRITICAL INSTRUCTION: Randomize the placement of the correct answer across option positions A, B, C, and D for every question. Do NOT place the correct answer at the same option position for consecutive questions.
+CRITICAL GRADE LEVEL & DIFFICULTY RULES:
+1. Ensure all questions strictly match Grade ${grade} curriculum standards, concepts, and age level.
+2. Explanations and advice must be clearly tailored for Grade ${grade} level understanding.
+3. Randomize the placement of the correct answer across option positions A, B, C, and D for every question. Do NOT place the correct answer at the same option position for consecutive questions.
 
 You MUST return a raw JSON array of exactly ${questionCount} objects. Do NOT wrap it in Markdown backticks or any outer object.
 Each object must have the following exact keys:
@@ -175,40 +176,67 @@ Example format:
   }
 ]`;
 
-    const candidateModels = [
-      "gemini-2.5-flash",
-      "gemini-2.0-flash",
-      "gemini-1.5-flash"
-    ];
-
     let rawText: string | null = null;
     let lastError: string | null = null;
 
-    for (const model of candidateModels) {
+    // Try Groq API first if key is available
+    if (process.env.GROQ_API_KEY) {
       try {
-        const resp = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ role: "user", parts: [{ text: prompt }] }],
-              generationConfig: { responseMimeType: "application/json" }
-            })
-          }
-        );
+        console.log("[Generate Topic Test] Generating via Groq API...");
+        const Groq = (await import("groq-sdk")).default;
+        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+        const groqModel = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 
-        if (resp.ok) {
-          const apiData = await resp.json();
-          rawText = apiData.candidates?.[0]?.content?.parts?.[0]?.text || null;
-          if (rawText) break;
-        } else {
-          lastError = `Model ${model} returned HTTP ${resp.status}`;
-          console.warn(`[Generate Topic Test] ${lastError}`);
+        const completion = await groq.chat.completions.create({
+          model: groqModel,
+          messages: [{ role: "user", content: prompt }],
+          response_format: { type: "json_object" },
+          temperature: 0.5,
+          max_completion_tokens: 2048,
+        });
+
+        rawText = completion.choices[0]?.message?.content || null;
+        if (rawText) console.log("[Generate Topic Test] Successfully generated topic test via Groq API");
+      } catch (groqErr: any) {
+        console.warn("[Generate Topic Test] Groq API failed, falling back to Gemini:", groqErr?.message || groqErr);
+      }
+    }
+
+    // Fallback to Gemini if Groq did not return output
+    if (!rawText) {
+      const candidateModels = [
+        process.env.GEMINI_MODEL || "gemini-3.6-flash",
+        "gemini-3.6-flash",
+        "gemini-3.7-flash"
+      ];
+
+      for (const model of candidateModels) {
+        try {
+          const resp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              signal: AbortSignal.timeout(15000),
+              body: JSON.stringify({
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: "application/json" }
+              })
+            }
+          );
+
+          if (resp.ok) {
+            const apiData = await resp.json();
+            rawText = apiData.candidates?.[0]?.content?.parts?.[0]?.text || null;
+            if (rawText) break;
+          } else {
+            lastError = `Model ${model} returned HTTP ${resp.status}`;
+            console.warn(`[Generate Topic Test] ${lastError}`);
+          }
+        } catch (err: any) {
+          lastError = err.message;
+          console.warn(`[Generate Topic Test] Fetch error for model ${model}:`, err);
         }
-      } catch (err: any) {
-        lastError = err.message;
-        console.warn(`[Generate Topic Test] Fetch error for model ${model}:`, err);
       }
     }
 

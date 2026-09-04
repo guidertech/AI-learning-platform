@@ -14,10 +14,6 @@ import {useAISpeechLanguage} from "@/hooks/useAISpeechLanguage";
 import { createClient } from "@/lib/supabase/client";
 import { Message, Weakness } from "@/types/learning";
 import { SubjectProficiency } from "@/types/progress";
-import {
-  initialChatMessages,
-  mockWeaknesses,
-} from "@/features/curriculum/data/learning";
 
 interface LearningContextType {
   studentMins: number;
@@ -306,12 +302,10 @@ export function LearningProvider({
   ] = useState(65);
 
   const [weaknesses, setWeaknesses] =
-    useState<Weakness[]>(mockWeaknesses);
+    useState<Weakness[]>([]);
 
   const [chatMessages, setChatMessages] =
-    useState<Message[]>(
-      initialChatMessages
-    );
+    useState<Message[]>([]);
 
   const [
     isAISpeaking,
@@ -376,15 +370,15 @@ export function LearningProvider({
 
     setChatMessages(
       readLocalJson<Message[]>(
-        "classorbit_chat",
-        initialChatMessages
+        "classorbit_chat_messages",
+        []
       )
     );
 
     setWeaknesses(
       readLocalJson<Weakness[]>(
         "classorbit_weaknesses",
-        mockWeaknesses
+        []
       )
     );
 
@@ -814,9 +808,7 @@ export function LearningProvider({
 
 
   const resetChat = () => {
-    setChatMessages(
-      initialChatMessages
-    );
+    setChatMessages([]);
 
     localStorage.removeItem(
       "classorbit_chat"

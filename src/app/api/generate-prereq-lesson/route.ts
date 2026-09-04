@@ -33,103 +33,133 @@ export async function GET(req: Request) {
     ].filter((k) => k && k !== "placeholder" && k !== "");
 
     if (apiKeys.length === 0) {
-      // Return a basic fallback structure directly
-      return NextResponse.json({
-        topic,
-        title: `${topic} की बुनियादी बातें`,
-        explanation: `यहाँ हम ${topic} के बारे में बुनियादी अवधारणाओं को आसान भाषा में समझेंगे। यह आपके मुख्य अध्याय '${chapter.name}' को समझने में मदद करेगा।`,
-        example: `${topic} का हल किया हुआ उदाहरण।`,
-        imageSrc: "https://images.unsplash.com/photo-1596495578065-6e076b888b83?w=800&auto=format&fit=crop&q=60"
-      });
+      apiKeys.push("placeholder-key-attempt");
     }
 
-    const prompt = `You are an expert friendly AI school teacher. Create a short, highly engaging, and very simple concept explanation lesson in Hindi (Devanagari script) for a Grade 5 student.
-The student struggled with the prerequisite topic "${topic}" for the chapter "${chapter.name}".
+    const gradeParam = searchParams.get("grade") || "5";
 
-Provide:
-1. A catchy, simple title for the lesson in Hindi.
-2. A very clear, easy-to-understand explanation of the concept in Hindi. Use simple, conversational language, analogies if helpful, and keep it friendly.
-3. A step-by-step solved example in Hindi to show the concept in action.
+    const prompt = `You are a friendly, highly intelligent AI study tutor for Grade ${gradeParam} school students.
+Topic: "${topic}" | Chapter: "${chapter.name}" | Student Level: Grade ${gradeParam}
+
+CRITICAL INSTRUCTIONS FOR CLEAN OUTPUT:
+1. ABSOLUTELY NO LaTeX markup or LaTeX commands (DO NOT write \\boxed{}, \\longrightarrow, \\underbrace{}, \\text{}, \\frac{}{}, \\[, \\]).
+2. Write chemical equations and math formulas in simple plain readable text using unicode arrows/subscripts (e.g. "6 CO₂ + 6 H₂O + Light Energy ➔ C₆H₁₂O₆ + 6 O₂").
+3. Use rich Markdown formatting: **bold key terms**, section headings (##, ###), bullet points (-), numbered lists (1.), and clean tables (| Col 1 | Col 2 |).
+4. Tailor the depth, tone, examples, and vocabulary strictly for a Grade ${gradeParam} student.
+5. Write all explanations, headings, and examples in simple, clean, natural English.
+
+Provide a comprehensive, engaging explanation lesson in English.
 
 Format the response strictly as a JSON object conforming to this schema:
 {
   "topic": "${topic}",
-  "title": "A short and simple Title in Hindi",
-  "explanation": "Clear explanation in Devanagari Hindi (2-3 paragraphs, simple grade-5 level vocabulary)",
-  "example": "A step-by-step solved example in Devanagari Hindi"
+  "title": "A short, encouraging title in English with emojis (e.g., 🌟 Understanding ${topic} – Grade ${gradeParam} Guide)",
+  "explanation": "Detailed explanation tailored for Grade ${gradeParam} in simple English with rich Markdown formatting matching ALL instructions above (include intro paragraph, headings like ## 1️⃣ What is ${topic}?, bullet points with bold terms, markdown tables like | Feature | Details |, etc.)",
+  "example": "Optional step-by-step solved example in clean plain text and markdown formatting in simple English for Grade ${gradeParam}"
 }`;
 
-    // Try API keys sequentially
-    let apiResponse: Response | null = null;
-    let lastError = "";
+    let rawText = "";
 
-    for (const key of apiKeys) {
+    // Try Groq API first if key is available
+    if (process.env.GROQ_API_KEY) {
       try {
-        const resp = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [
-                {
-                  role: "user",
-                  parts: [{ text: prompt }]
-                }
-              ],
-              generationConfig: {
-                responseMimeType: "application/json"
-              }
-            })
-          }
-        );
+        console.log("[Prereq Lesson API] Generating via Groq API...");
+        const Groq = (await import("groq-sdk")).default;
+        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+        const groqModel = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 
-        if (resp.ok) {
-          apiResponse = resp;
-          break;
-        }
+        const completion = await groq.chat.completions.create({
+          model: groqModel,
+          messages: [{ role: "user", content: prompt }],
+          response_format: { type: "json_object" },
+          temperature: 0.5,
+          max_completion_tokens: 2048,
+        });
 
-        lastError = `Gemini API returned status ${resp.status}`;
-        if (resp.status !== 429) {
-          break;
-        }
-      } catch (err: any) {
-        lastError = err.message;
+        rawText = completion.choices[0]?.message?.content || "";
+        console.log("[Prereq Lesson API] Successfully generated lesson via Groq API");
+      } catch (groqErr: any) {
+        console.warn("[Prereq Lesson API] Groq API failed, falling back to Gemini:", groqErr?.message || groqErr);
       }
     }
 
-    if (!apiResponse) {
-      throw new Error(lastError || "All API keys failed");
+    // Fallback to Gemini if Groq did not return output
+    if (!rawText) {
+      const candidateModels = Array.from(new Set([
+        process.env.GEMINI_MODEL || "gemini-3.6-flash",
+        "gemini-3.6-flash",
+        "gemini-3.7-flash"
+      ]));
+
+      let apiResponse: Response | null = null;
+      let lastError = "";
+
+      outerLoop:
+      for (const key of apiKeys) {
+        for (const model of candidateModels) {
+          try {
+            const resp = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                signal: AbortSignal.timeout(15000),
+                body: JSON.stringify({
+                  contents: [
+                    {
+                      role: "user",
+                      parts: [{ text: prompt }]
+                    }
+                  ],
+                  generationConfig: {
+                    responseMimeType: "application/json"
+                  }
+                })
+              }
+            );
+
+            if (resp.ok) {
+              apiResponse = resp;
+              break outerLoop;
+            }
+
+            lastError = `Gemini API model ${model} returned status ${resp.status}`;
+          } catch (err: any) {
+            lastError = err.message;
+          }
+        }
+      }
+
+      if (!apiResponse) {
+        throw new Error(lastError || "All AI API attempts failed");
+      }
+
+      const apiData = await apiResponse.json();
+      rawText = apiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
     }
 
-    const apiData = await apiResponse.json();
-    const rawText = apiData.candidates?.[0]?.content?.parts?.[0]?.text;
-
     if (!rawText) {
-      throw new Error("No response text returned from Gemini API");
+      throw new Error("No response text returned from AI API");
     }
 
     const parsed = JSON.parse(rawText.trim());
 
-    // Add a default Unsplash image representation
-    const defaultImage = "https://images.unsplash.com/photo-1509228468518-180dd4864904?w=800&auto=format&fit=crop&q=60";
-
     return NextResponse.json({
       topic: parsed.topic || topic,
-      title: parsed.title || `${topic} की बुनियादी बातें`,
+      title: parsed.title || `🌟 ${topic} – Basics`,
       explanation: parsed.explanation || "",
       example: parsed.example || "",
-      imageSrc: defaultImage
+      imageSrc: ""
     });
 
   } catch (err: any) {
     console.error("[Generate Prereq Lesson API] Error:", err);
     return NextResponse.json({
       topic: "Error",
-      title: "बुनियादी बातें",
-      explanation: "अवधारणा की व्याख्या लोड करने में त्रुटि हुई। कृपया आगे बढ़ें या पुनः प्रयास करें।",
-      example: "उदाहरण उपलब्ध नहीं है।",
-      imageSrc: "https://images.unsplash.com/photo-1596495578065-6e076b888b83?w=800&auto=format&fit=crop&q=60"
+      title: "Foundational Lesson",
+      explanation: "An error occurred while loading the explanation. Please proceed or try again.",
+      example: "Example not available.",
+      imageSrc: ""
     });
   }
 }

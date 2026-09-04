@@ -24,15 +24,12 @@ const wss = new WebSocketServer({ noServer: true });
 
 let aiClient = null;
 
-function getAI() {
-  if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY environment variable is required.");
-    }
-    aiClient = new GoogleGenAI({ apiKey });
+function getAI(keyOverride) {
+  const apiKey = keyOverride || process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY environment variable is required.");
   }
-  return aiClient;
+  return new GoogleGenAI({ apiKey });
 }
 
 server.on("upgrade", (request, socket, head) => {
@@ -64,23 +61,39 @@ wss.on("connection", async (clientWs, request) => {
   let clientClosed = false;
 
   try {
-    const ai = getAI();
     console.log("Connecting to Gemini Live API...");
 
-    geminiSession = await ai.live.connect({
-      model: "gemini-3.1-flash-live-preview",
-      config: {
-        responseModalities: ["AUDIO"],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: {
-              voiceName: "Aoede"
-            }
-          }
-        },
-        inputAudioTranscription: {},
-        outputAudioTranscription: {},
-        systemInstruction: `You are Maya, a professional, friendly, and helpful real-time AI teaching assistant.
+    const candidateKeys = [
+      process.env.GEMINI_API_KEY,
+      process.env.GEMINI_API_KEY_2
+    ].filter(Boolean);
+
+    const candidateModels = [
+      process.env.GEMINI_LIVE_MODEL || "gemini-2.0-flash-exp",
+      "gemini-2.0-flash-exp",
+      "gemini-2.0-flash-realtime-exp"
+    ];
+
+    let connectedModel = null;
+
+    for (const keyCandidate of candidateKeys) {
+      const ai = getAI(keyCandidate);
+      for (const modelCandidate of candidateModels) {
+        try {
+          geminiSession = await ai.live.connect({
+            model: modelCandidate,
+            config: {
+              responseModalities: ["AUDIO"],
+              speechConfig: {
+                voiceConfig: {
+                  prebuiltVoiceConfig: {
+                    voiceName: "Aoede"
+                  }
+                }
+              },
+              inputAudioTranscription: {},
+              outputAudioTranscription: {},
+              systemInstruction: `You are Maya, a professional, friendly, and helpful real-time AI teaching assistant.
 You are talking to a student named ${studentName} who is in ${studentGrade}.
 The active chapter is "${activeChapter}" and the active topic is "${activeTopic}".
 
@@ -91,56 +104,72 @@ TEACHING GUIDELINES:
 4. Immediately ask a simple question in ${responseLanguage} to check ${studentName}'s understanding.
 5. NEVER give the direct answer to any problem. Guide the student Socratically.
 6. Keep your answers brief, engaging, and highly conversational.`
-      },
-      callbacks: {
-        onmessage: (message) => {
-          try {
-            const payload = {};
-            const audio = message.data;
-            if (audio) {
-              payload.audio = audio;
-            }
+            },
+            callbacks: {
+              onmessage: (message) => {
+                try {
+                  const payload = {};
+                  const audio = message.data;
+                  if (audio) {
+                    payload.audio = audio;
+                  }
 
-            const interimInput = message.serverContent?.interimInputTranscription?.text;
-            const inputTranscription = message.serverContent?.inputTranscription?.text;
-            const outputTranscription = message.serverContent?.outputTranscription?.text;
+                  const interimInput = message.serverContent?.interimInputTranscription?.text;
+                  const inputTranscription = message.serverContent?.inputTranscription?.text;
+                  const outputTranscription = message.serverContent?.outputTranscription?.text;
 
-            if (interimInput) payload.interimInputTranscription = interimInput;
-            if (inputTranscription) payload.inputTranscription = inputTranscription;
-            if (outputTranscription) payload.outputTranscription = outputTranscription;
+                  if (interimInput) payload.interimInputTranscription = interimInput;
+                  if (inputTranscription) payload.inputTranscription = inputTranscription;
+                  if (outputTranscription) payload.outputTranscription = outputTranscription;
 
-            if (message.serverContent?.interrupted) {
-              payload.interrupted = true;
-            }
-            if (message.serverContent?.turnComplete) {
-              payload.turnComplete = true;
-            }
+                  if (message.serverContent?.interrupted) {
+                    payload.interrupted = true;
+                  }
+                  if (message.serverContent?.turnComplete) {
+                    payload.turnComplete = true;
+                  }
 
-            if (Object.keys(payload).length > 0 && clientWs.readyState === 1) {
-              clientWs.send(JSON.stringify(payload));
+                  if (Object.keys(payload).length > 0 && clientWs.readyState === 1) {
+                    clientWs.send(JSON.stringify(payload));
+                  }
+                } catch (err) {
+                  console.error("Error parsing Gemini message callback:", err);
+                }
+              },
+              onclose: (event) => {
+                if (clientClosed) {
+                  console.log("[INFO] Gemini session closed because browser disconnected first.");
+                } else {
+                  console.log("[WARN] Gemini Live session ended. Code:", event?.code, "Reason:", event?.reason || "(no reason)");
+                }
+                if (clientWs.readyState === 1) {
+                  let friendlyError = "Gemini Live Voice is unavailable on your API key/tier. Text chat is active!";
+                  if (event?.code === 1008) {
+                    friendlyError = "Gemini Live Audio API requires a Pay-as-you-go / Google Cloud key. Standard Text Chat & Speech remain fully active.";
+                  }
+                  clientWs.send(JSON.stringify({ error: friendlyError, closed: true }));
+                }
+              },
+              onerror: (err) => {
+                console.error("Gemini Live API error:", err);
+                if (clientWs.readyState === 1) {
+                  clientWs.send(JSON.stringify({ error: err.message || "Gemini Session Error" }));
+                }
+              }
             }
-          } catch (err) {
-            console.error("Error parsing Gemini message callback:", err);
-          }
-        },
-        onclose: (event) => {
-          if (clientClosed) {
-            console.log("[INFO] Gemini session closed because browser disconnected first.");
-          } else {
-            console.log("[WARN] Gemini Live API closed by server. Code:", event?.code, "Reason:", event?.reason || "(no reason)");
-          }
-          if (clientWs.readyState === 1) {
-            clientWs.send(JSON.stringify({ closed: true }));
-          }
-        },
-        onerror: (err) => {
-          console.error("Gemini Live API error:", err);
-          if (clientWs.readyState === 1) {
-            clientWs.send(JSON.stringify({ error: err.message || "Gemini Session Error" }));
-          }
+          });
+          connectedModel = modelCandidate;
+          break;
+        } catch (connErr) {
+          console.warn(`[Server] Live connect attempt with ${modelCandidate} failed:`, connErr?.message || connErr);
         }
       }
-    });
+      if (geminiSession) break;
+    }
+
+    if (!geminiSession) {
+      throw new Error("None of the Gemini Live candidate models could be connected.");
+    }
 
     console.log("Connected successfully to Gemini Live API");
     if (clientWs.readyState === 1) {
@@ -194,7 +223,7 @@ TEACHING GUIDELINES:
     if (geminiSession) {
       try {
         geminiSession.close();
-      } catch (_) {}
+      } catch (_) { }
     }
   });
 });

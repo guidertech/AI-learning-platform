@@ -12,6 +12,7 @@ import AskMayaInput from "./AskMayaInput";
 import AISpeechText from "./AISpeechText";
 import { useAISpeechLanguage } from "@/hooks/useAISpeechLanguage";
 import { translateForSpeech } from "@/features/language";
+import FormattedMarkdown from "@/components/common/FormattedMarkdown";
 
 const TypingIndicator = () => (
   <div className="flex items-center gap-1.5 py-2">
@@ -465,25 +466,30 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
 
         if (data.error) {
           console.warn("[Client] Received error from server:", data.error);
-          setVoiceError("Server error: " + data.error);
+          setVoiceError(data.error);
+          stopVoiceConnection();
+          setPanelMode("text");
         }
       };
 
       ws.current.onclose = (e) => {
         console.log("[Client] WebSocket closed:", e.code, e.reason);
         stopVoiceConnection();
+        setPanelMode("text");
       };
 
       ws.current.onerror = (err) => {
         console.warn("[Client] WebSocket connection event:", err);
-        setVoiceError("Connection error.");
+        setVoiceError("Live voice unavailable. Switched to Text Chat.");
         stopVoiceConnection();
+        setPanelMode("text");
       };
     } catch (err) {
       console.warn("startVoiceConnection notice:", err);
       const errorMsg = err instanceof Error ? err.message : String(err);
       setVoiceError("Failed to connect: " + errorMsg);
       stopVoiceConnection();
+      setPanelMode("text");
     }
   };
 
@@ -725,8 +731,14 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
                         ? "bg-slate-50 border-outline-variant/10 rounded-tl-none text-on-surface"
                         : "bg-primary text-white border-transparent rounded-tr-none"
                       }`}>
-                      <div className="flex items-start justify-between gap-2">
-                        {isAI ? <AISpeechText text={msg.text} /> : <span data-no-translate>{msg.text}</span>}
+                      <div className="flex items-start justify-between gap-2 w-full">
+                        {isAI ? (
+                          <div className="flex-1 min-w-0">
+                            <FormattedMarkdown content={msg.text} />
+                          </div>
+                        ) : (
+                          <span data-no-translate>{msg.text}</span>
+                        )}
                         {isAI && (
                           <button
                             onClick={async (e) => {
@@ -955,11 +967,11 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
                       }`}>
                       <span className="material-symbols-outlined text-[14px]">{isAI ? "psychology" : "person"}</span>
                     </div>
-                    <div data-no-translate className={`p-3 rounded-2xl border text-xs max-w-[82%] leading-relaxed ${isAI
+                    <div className={`p-3 rounded-2xl border text-xs max-w-[82%] leading-relaxed ${isAI
                         ? "bg-slate-50 border-outline-variant/10 rounded-tl-none text-on-surface"
                         : "bg-primary text-white border-transparent rounded-tr-none"
                       }`}>
-                      {isAI ? <AISpeechText text={msg.text} /> : msg.text}
+                      {isAI ? <FormattedMarkdown content={msg.text} /> : <span data-no-translate>{msg.text}</span>}
                     </div>
                   </div>
                 );

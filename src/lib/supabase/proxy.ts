@@ -86,10 +86,15 @@ export async function updateSession(
    * createServerClient aur getClaims ke beech
    * unrelated authentication logic mat likhein.
    */
-  const { data: claimsData } =
-    await supabase.auth.getClaims();
+  let user = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data?.user ?? null;
+  } catch (err) {
+    user = null;
+  }
 
-  const userId = claimsData?.claims?.sub;
+  const userId = user?.id;
   const pathname = request.nextUrl.pathname;
 
   const isProtectedRoute =
