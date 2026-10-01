@@ -14,7 +14,7 @@ console.log("[Server] Starting Voice Server...");
 console.log("[Server] Directory:", __dirname);
 console.log("[Server] GEMINI_API_KEY loaded?:", !!process.env.GEMINI_API_KEY);
 
-const port = 3002;
+const port = process.env.PORT || 3002;
 const server = createServer((req, res) => {
   res.writeHead(200, { "Content-Type": "text/plain" });
   res.end("Voice server is active\n");
