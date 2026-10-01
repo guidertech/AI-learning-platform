@@ -69,10 +69,8 @@ wss.on("connection", async (clientWs, request) => {
     ].filter(Boolean);
 
     const candidateModels = [
-      process.env.GEMINI_LIVE_MODEL || "gemini-2.0-flash-exp",
-      "gemini-2.0-flash-exp",
-      "gemini-2.0-flash-realtime-exp"
-    ];
+      process.env.GEMINI_LIVE_MODEL
+    ].filter(Boolean);
 
     let connectedModel = null;
 
