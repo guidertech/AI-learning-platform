@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { MCQ } from "@/types/quiz";
 import PageContainer from "@/components/layout/PageContainer";
 import Topbar from "@/components/layout/Topbar";
-
 import { createClient } from "@/lib/supabase/client";
 
 interface PrerequisitePageProps {

@@ -1,7 +1,4 @@
 "use client";
-
-import React from "react";
-
 interface ThinkCardProps {
   promptText: string;
   options: string[];
@@ -12,7 +9,6 @@ interface ThinkCardProps {
   onCheckAnswer: () => void;
   correctAnswerText: string;
 }
-
 export default function ThinkCard({
   promptText,
   options,
