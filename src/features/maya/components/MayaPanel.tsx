@@ -305,9 +305,10 @@ export default function MayaPanel({ autoStartVoice = false }: MayaPanelProps) {
       setIsVoiceConnecting(true);
       // setIsVoiceActive(true); // will be set after successful init
 
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const voiceLocale = aiSpeechLanguage === "hi" ? "hi-IN" : "en-IN";
-      const wsUrl = `${protocol}//${window.location.hostname}:3002?name=${encodeURIComponent(studentName)}&grade=${encodeURIComponent(studentGrade)}&topic=${encodeURIComponent(activeTopic)}&chapter=${encodeURIComponent(activeChapter)}&locale=${voiceLocale}`;
+      const isDev = process.env.NODE_ENV === "development" && window.location.hostname === "localhost";
+      const wsHost = process.env.NEXT_PUBLIC_WS_URL || (isDev ? "ws://localhost:3002" : "wss://ai-learning-platform-4p78.onrender.com");
+      const wsUrl = `${wsHost}?name=${encodeURIComponent(studentName)}&grade=${encodeURIComponent(studentGrade)}&topic=${encodeURIComponent(activeTopic)}&chapter=${encodeURIComponent(activeChapter)}&locale=${voiceLocale}`;
 
       ws.current = new WebSocket(wsUrl);
 
